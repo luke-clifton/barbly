@@ -81,7 +81,7 @@ main = do
     initApp
     p <- newStatusItem
     let cmd:args = Main.command os
-    runApp 3 $ do
+    runApp (period os) $ do
         print "World"
         res <- exe cmd args |> capture
         createMenu p (parse (Char8.unpack res))
