@@ -59,7 +59,7 @@ void setTitle(NSStatusItem *si, char *title)
 	si.button.title = newNSString(title);
     if (old)
     {
-        [old release ];
+        [old release];
     }
 }
 
