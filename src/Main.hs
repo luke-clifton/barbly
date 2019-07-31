@@ -25,6 +25,8 @@ foreign import ccall "newMenuItem" newMenuItem' :: CString -> FunPtr (IO ()) -> 
 foreign import ccall "addMenuItem" addMenuItem :: NSMenu -> NSMenuItem -> IO ()
 foreign import ccall "setStatusItemMenu" setStatusItemMenu :: NSStatusItem -> NSMenu -> IO ()
 
+foreign export ccall freeHaskellFunPtr :: FunPtr  (IO ()) -> IO ()
+
 runApp :: Double -> IO () -> IO ()
 runApp d p = do
     p' <- wrap p
@@ -32,21 +34,19 @@ runApp d p = do
 
 setTitle :: NSStatusItem -> String -> IO ()
 setTitle mi s = do
-    cs <- newCString s
-    setTitle' mi cs
+    withCString s $ setTitle' mi
 
 newMenu :: String -> IO NSMenu
 newMenu s = do
-    cs <- newCString s
-    newMenu' cs
+    withCString s newMenu'
 
 newMenuItem :: String -> Maybe (IO ()) -> IO NSMenuItem
 newMenuItem s a = do
-    cs <- newCString s
-    a' <- case a of
-        Just act -> wrap act
-        Nothing  -> pure nullFunPtr
-    newMenuItem' cs a'
+    withCString s $ \cs -> do
+        a' <- case a of
+            Just act -> wrap act
+            Nothing  -> pure nullFunPtr
+        newMenuItem' cs a'
 
 
 data Menu = Menu
@@ -82,7 +82,6 @@ main = do
     p <- newStatusItem
     let cmd:args = Main.command os
     runApp (period os) $ do
-        print "World"
         res <- exe cmd args |> capture
         createMenu p (parse (Char8.unpack res))
 
@@ -93,7 +92,7 @@ parse :: String -> Menu
 parse = go . lines
     where
         go :: [String] -> Menu
-        go (l:ls) = Menu l (map parseLine ls)
+        go (l:ls) = Menu l (map parseLine ls ++ [("Test", Just $ print 555)])
         
         parseLine :: String -> (String, Maybe (IO ()))
         parseLine s =
