@@ -3,6 +3,7 @@
 {-# LANGUAGE ExtendedDefaultRules #-}
 module Main where
 
+import Control.Monad
 import Control.Concurrent
 import System.Environment
 import Options.Applicative
@@ -16,15 +17,26 @@ import AppKit
 
 data Menu = Menu
     { title :: Char8S.ByteString
-    , items :: [(Char8S.ByteString, Maybe (IO ()))]
+    , items :: [MenuItem] -- [(Char8S.ByteString, Maybe (IO ()))]
     }
+
+data MenuItem
+    = MenuSeparator
+    | MenuInfo Char8S.ByteString
+    | MenuAction Char8S.ByteString (IO ())
 
 createMenu :: NSStatusItem -> Menu -> IO ()
 createMenu si m = do
     setTitle si (title m)
     nm <- newMenu (title m)
-    mapM_ (\(s,a) -> newMenuItem s a  >>= addMenuItem nm) (items m)
+    mapM_ (\mi -> createMenuItem mi >>= addMenuItem nm) (items m)
     setStatusItemMenu si nm
+
+    where
+        createMenuItem :: MenuItem -> IO NSMenuItem
+        createMenuItem (MenuInfo s) = newMenuItem s Nothing
+        createMenuItem (MenuAction s a) = newMenuItem s (Just a)
+        createMenuItem MenuSeparator = newSeparator
 
 data Options = Options
     { period :: Double
@@ -48,25 +60,31 @@ main = do
     let cmd:args = Main.command os
     runApp (period os) $ do
         res <- exe cmd args |> capture
-        createMenu p (parse' (Char8.toStrict res))
+        createMenu p (parse (Char8.toStrict res))
 
-parseItem' :: P.Parser (Char8S.ByteString, Maybe (IO ()))
-parseItem' = (,) <$> parseBody <*> parseAction
+parseItem' :: P.Parser MenuItem
+parseItem' = P.choice
+    [ parseSep
+    , parseMAction
+    , parseInfo
+    ]
     where
+        parseSep = P.string "---" *> P.endOfInput *> pure MenuSeparator
+        parseInfo = MenuInfo <$> P.takeByteString
+        parseMAction = MenuAction <$> parseBody <*> parseAction
         parseBody = P.takeTill (\s -> s=='|')
         parseAction = (P.char '|' >> P.skipSpace) *> P.choice
-            [ Just <$> parseURL
-            , pure Nothing
+            [ parseURL
             ]
         parseURL = exe "open" . Char8.fromStrict <$> (P.string "href=" *> P.takeTill (=='\n'))
 
-parseItem :: Char8S.ByteString -> (Char8S.ByteString, Maybe (IO ()))
+parseItem :: Char8S.ByteString -> MenuItem
 parseItem s = case P.parseOnly parseItem' s of
-    Left _ -> (s, Nothing)
+    Left _ -> MenuInfo s
     Right r -> r
 
-parse' :: Char8S.ByteString -> Menu
-parse' s =
+parse :: Char8S.ByteString -> Menu
+parse s =
     let
         title:items = Char8S.lines s
         is = map parseItem items

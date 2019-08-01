@@ -23,6 +23,7 @@ foreign import ccall "newStatusItem" newStatusItem' :: IO (Ptr ())
 foreign import ccall "setTitle" setTitle' :: Ptr () -> CString -> IO ()
 foreign import ccall "newMenu" newMenu' :: CString -> IO (Ptr ())
 foreign import ccall "newMenuItem" newMenuItem' :: CString -> FunPtr (IO ()) -> IO (Ptr ())
+foreign import ccall "newSeparator" newSeparator' :: IO (Ptr ())
 foreign import ccall "addMenuItem" addMenuItem' :: Ptr () -> Ptr () -> IO ()
 foreign import ccall "setStatusItemMenu" setStatusItemMenu' :: Ptr ()  -> Ptr () -> IO ()
 foreign import ccall "release" release :: Ptr () -> IO ()
@@ -69,3 +70,8 @@ setTitle :: NSStatusItem -> ByteString -> IO ()
 setTitle (NSStatusItem fpsi) s = do
     withForeignPtr fpsi $ \si ->
         useAsCString s $ setTitle' si
+
+newSeparator :: IO NSMenuItem
+newSeparator = do
+    p <- newSeparator'
+    NSMenuItem <$> newForeignPtr p (pure ())

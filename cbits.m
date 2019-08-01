@@ -110,6 +110,11 @@ MyMenuItem *newMenuItem(char *title, void (*ptr)(void))
 	return mi;
 }
 
+NSMenuItem *newSeparator(void)
+{
+    return [NSMenuItem separatorItem];
+}
+
 void addMenuItem(NSMenu *m, NSMenuItem *i)
 {
 	[m addItem: i];
@@ -119,3 +124,4 @@ void setStatusItemMenu(NSStatusItem *si, NSMenu *m)
 {
 	si.menu = m;
 }
+
