@@ -44,15 +44,6 @@ NSString *newNSString(char *str)
 	return [[NSString string] initWithUTF8String: str];
 }
 
-// NSAttributedString *newPlainString(char *str)
-// {
-// 	// ;
-// }
-// 
-// 
-// 
-// NSAttributedString *newColourString(char *str, 
-
 void setTitle(NSStatusItem *si, char *title)
 {
     NSString *old = si.button.title;
