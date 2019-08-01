@@ -72,7 +72,9 @@ NSString *newNSString(char *str)
 
 void setTitle(NSStatusItem *si, char *title)
 {
-	si.button.title = newNSString(title);
+    NSString *t = newNSString(title);
+	si.button.title = t;
+    [t release];
 }
 
 void runApp(double period, void (*ptr)(void))
