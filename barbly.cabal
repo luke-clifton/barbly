@@ -18,7 +18,7 @@ extra-source-files:  CHANGELOG.md
 
 executable barbly
   main-is:             Main.hs
-  -- other-modules:
+  other-modules:       AppKit
   -- other-extensions:
   build-depends:       base >=4.12 && <4.13, shh, optparse-applicative, attoparsec, bytestring
   hs-source-dirs:      src

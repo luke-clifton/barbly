@@ -3,6 +3,11 @@
 
 #include <unistd.h>
 
+void release(id o)
+{
+    [o release];
+}
+
 void freeHaskellFunPtr(void (*ptr)(void));
 
 @interface IOAction : NSObject
@@ -29,6 +34,27 @@ void freeHaskellFunPtr(void (*ptr)(void));
 
 @end
 
+/******************************************************/
+
+@interface MyMenuItem : NSMenuItem
+{
+}
+
+- (void) dealloc;
+@end
+
+@implementation MyMenuItem
+
+- (void) dealloc
+{
+    if (self.target) [self.target release];
+    [super dealloc];
+}
+
+@end
+
+/******************************************************/
+
 void initApp(void)
 {
 	[NSApplication sharedApplication];
@@ -46,12 +72,7 @@ NSString *newNSString(char *str)
 
 void setTitle(NSStatusItem *si, char *title)
 {
-    NSString *old = si.button.title;
 	si.button.title = newNSString(title);
-    if (old)
-    {
-        [old release];
-    }
 }
 
 void runApp(double period, void (*ptr)(void))
@@ -72,10 +93,10 @@ NSMenu *newMenu(char *title)
     return m;
 }
 
-NSMenuItem *newMenuItem(char *title, void (*ptr)(void))
+MyMenuItem *newMenuItem(char *title, void (*ptr)(void))
 {
     NSString *t = newNSString(title);
-	NSMenuItem *mi = [[NSMenuItem alloc] initWithTitle: t action: NULL keyEquivalent: @""];
+	MyMenuItem *mi = [[MyMenuItem alloc] initWithTitle: t action: NULL keyEquivalent: @""];
     [t release];
 	if (ptr)
 	{
@@ -83,7 +104,6 @@ NSMenuItem *newMenuItem(char *title, void (*ptr)(void))
 		action->ioaction = ptr;
 		mi.target = action;
 		mi.action = @selector(callIOAction);
-        // [action release];
 	}
 	return mi;
 }
@@ -91,20 +111,9 @@ NSMenuItem *newMenuItem(char *title, void (*ptr)(void))
 void addMenuItem(NSMenu *m, NSMenuItem *i)
 {
 	[m addItem: i];
-    [i release];
 }
 
 void setStatusItemMenu(NSStatusItem *si, NSMenu *m)
 {
-    NSMenu *old = si.menu;
 	si.menu = m;
-    if (old)
-    {
-        for (NSMenuItem *object in old.itemArray)
-        {
-            [object.target release];
-        }
-        [old removeAllItems];
-        [old release];
-    }
 }

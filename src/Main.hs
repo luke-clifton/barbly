@@ -4,10 +4,6 @@
 module Main where
 
 import Control.Concurrent
-import Foreign.C
-import Foreign.Ptr
-import Foreign.Marshal
-import Data.IORef
 import System.Environment
 import Options.Applicative
 import qualified Data.ByteString.Lazy.Char8 as Char8
@@ -15,42 +11,7 @@ import qualified Data.ByteString.Char8 as Char8S
 import Shh
 import qualified Data.Attoparsec.ByteString.Char8 as P
 
-newtype NSStatusItem = NSStatusItem { nsStatusItemPtr :: Ptr () }
-newtype NSMenu       = NSMenu {nsMenuPtr :: Ptr ()}
-newtype NSMenuItem   = NSMenuItem {nsMenuItemPtr :: Ptr ()}
-
-foreign import ccall "wrapper" wrap :: IO () -> IO (FunPtr (IO ()))
-foreign import ccall "initApp" initApp :: IO ()
-foreign import ccall "runApp" runApp' :: Double -> FunPtr (IO ()) -> IO ()
-foreign import ccall "newStatusItem" newStatusItem :: IO NSStatusItem
-foreign import ccall "setTitle" setTitle' :: NSStatusItem -> CString -> IO ()
-foreign import ccall "newMenu" newMenu' :: CString -> IO (NSMenu)
-foreign import ccall "newMenuItem" newMenuItem' :: CString -> FunPtr (IO ()) -> IO (NSMenuItem)
-foreign import ccall "addMenuItem" addMenuItem :: NSMenu -> NSMenuItem -> IO ()
-foreign import ccall "setStatusItemMenu" setStatusItemMenu :: NSStatusItem -> NSMenu -> IO ()
-
-foreign export ccall freeHaskellFunPtr :: FunPtr  (IO ()) -> IO ()
-
-runApp :: Double -> IO () -> IO ()
-runApp d p = do
-    p' <- wrap p
-    runApp' d p'
-
-setTitle :: NSStatusItem -> String -> IO ()
-setTitle mi s = do
-    withCString s $ setTitle' mi
-
-newMenu :: String -> IO NSMenu
-newMenu s = do
-    withCString s newMenu'
-
-newMenuItem :: String -> Maybe (IO ()) -> IO NSMenuItem
-newMenuItem s a = do
-    withCString s $ \cs -> do
-        a' <- case a of
-            Just act -> wrap act
-            Nothing  -> pure nullFunPtr
-        newMenuItem' cs a'
+import AppKit
 
 data Menu = Menu
     { title :: String
