@@ -3,6 +3,7 @@
 {-# LANGUAGE ExtendedDefaultRules #-}
 module AppKit where
 
+import Data.ByteString (ByteString, useAsCString)
 import Foreign hiding (newForeignPtr)
 import Control.Concurrent
 import Foreign.C
@@ -50,21 +51,21 @@ addMenuItem (NSMenu fpm) (NSMenuItem fpmi) =
         withForeignPtr fpmi $ \mi ->
             addMenuItem' m mi
 
-newMenuItem :: String -> Maybe (IO ()) -> IO NSMenuItem
+newMenuItem :: ByteString -> Maybe (IO ()) -> IO NSMenuItem
 newMenuItem s a = do
-    withCString s $ \cs -> do
+    useAsCString s $ \cs -> do
         a' <- case a of
             Just act -> wrap act
             Nothing  -> pure nullFunPtr
         p <- newMenuItem' cs a'
         NSMenuItem <$> newForeignPtr p (release p)
 
-newMenu :: String -> IO NSMenu
+newMenu :: ByteString -> IO NSMenu
 newMenu s = do
-    p <- withCString s newMenu'
+    p <- useAsCString s newMenu'
     NSMenu <$> newForeignPtr p (release p)
 
-setTitle :: NSStatusItem -> String -> IO ()
+setTitle :: NSStatusItem -> ByteString -> IO ()
 setTitle (NSStatusItem fpsi) s = do
     withForeignPtr fpsi $ \si ->
-        withCString s $ setTitle' si
+        useAsCString s $ setTitle' si
