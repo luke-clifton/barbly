@@ -14,6 +14,10 @@ the contents of the menu, with possible clickable actions.
     # second.
     barbly --period 1 date
 
+## Sample Scripts
+
+Some sample scripts that are useful to use with barbly can be found in the
+[scripts](./scripts) directory.
 
 ## Syntax
 
