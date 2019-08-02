@@ -59,6 +59,7 @@ void sendEvent(void)
 {
 	NSEvent *e = [NSEvent otherEventWithType: NSApplicationDefined location: NSZeroPoint modifierFlags: 0 timestamp: 0 windowNumber: 0 context: nil subtype: 12 data1: 0 data2: 0];
 	[NSApp sendEvent: e];
+	[e release];
 }
 
 void initApp(void)

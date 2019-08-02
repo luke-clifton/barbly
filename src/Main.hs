@@ -20,7 +20,7 @@ import AppKit
 
 data Menu = Menu
     { title :: Char8S.ByteString
-    , items :: [MenuItem] -- [(Char8S.ByteString, Maybe (IO ()))]
+    , items :: [MenuItem]
     }
 
 data MenuItem
