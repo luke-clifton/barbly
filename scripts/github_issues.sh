@@ -12,7 +12,7 @@ REPO="$2"
 
 printf "%s/%s - " "$1" "$2"
 curl -nsS "${BASE_URL}/repos/$OWNER/$REPO/issues" \
-    | jq -r 'length,(.[] | "\(.title) | href=\(.url)")'
+    | jq -r 'length,(.[] | "\(.title) | href=\(.html_url)")'
 
 echo "---"
 
