@@ -56,7 +56,7 @@ opts = Options <$> parsePeriod <*> parseCommand
         parseCommand = (:) <$> strArgument (metavar "CMD" <> help "Command to run") <*> many (strArgument (metavar "ARGS"))
 
 main :: IO ()
-main = do
+main = runInBoundThread $ do
     os <- execParser $ info (opts <**> helper) fullDesc
     mv <- newEmptyMVar
     initApp
@@ -69,9 +69,8 @@ main = do
             sendEvent
             threadDelay (round $ period os * 1000000)
     withAsync (runner `finally` sendTerminate) $ \_ -> do
-        runInBoundThread $ do
-            runApp (period os) $
-                takeMVar mv >>= createMenu p
+        runApp (period os) $
+            takeMVar mv >>= createMenu p
 
 parseItem' :: P.Parser MenuItem
 parseItem' = P.choice
