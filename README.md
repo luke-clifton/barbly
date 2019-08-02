@@ -22,7 +22,7 @@ Some sample scripts that are useful to use with barbly can be found in the
 Here is an example of running the [`github_issues.sh`](./scripts/github_issues.sh)
 script with barbly to monitor for new issues.
 
-    barbly -p 60 ./scripts/github_issues.sh luke-clifton shh
+    barbly -p 60 ./scripts/github_issues.sh nixos nixpkgs
 
 ![Example Menu](./doc/demo.png)
 

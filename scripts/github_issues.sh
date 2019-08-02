@@ -18,6 +18,6 @@ curl -nsS "${BASE_URL}/repos/$OWNER/$REPO" \
 echo "---"
 
 curl -nsS "${BASE_URL}/repos/$OWNER/$REPO/issues" \
-    | jq -r '(.[] | "\(.title) | href=\(.html_url)")'
+    | jq -r '(.[] | "#\(.number) - \(.title) | href=\(.html_url)")'
 
 
