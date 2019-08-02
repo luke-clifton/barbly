@@ -69,8 +69,7 @@ main = runInBoundThread $ do
             sendEvent
             threadDelay (round $ period os * 1000000)
     withAsync (runner `finally` sendTerminate) $ \_ -> do
-        runApp (period os) $
-            takeMVar mv >>= createMenu p
+        runApp $ takeMVar mv >>= createMenu p
 
 parseItem' :: P.Parser MenuItem
 parseItem' = P.choice

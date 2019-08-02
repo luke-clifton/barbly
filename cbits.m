@@ -84,7 +84,7 @@ void setTitle(NSStatusItem *si, char *title)
     [t release];
 }
 
-void runApp(double period, void (*ptr)(void))
+void runApp(void (*ptr)(void))
 {
     [NSEvent addLocalMonitorForEventsMatchingMask: NSEventMaskApplicationDefined handler: ^NSEvent * _Nullable (NSEvent *e){
         ptr();

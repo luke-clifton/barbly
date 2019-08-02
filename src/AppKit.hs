@@ -18,7 +18,7 @@ newtype NSMenuItem   = NSMenuItem (ForeignPtr ())
 
 foreign import ccall "wrapper" wrap :: IO () -> IO (FunPtr (IO ()))
 foreign import ccall "initApp" initApp :: IO ()
-foreign import ccall "runApp" runApp' :: Double -> FunPtr (IO ()) -> IO ()
+foreign import ccall "runApp" runApp' :: FunPtr (IO ()) -> IO ()
 foreign import ccall "newStatusItem" newStatusItem' :: IO (Ptr ())
 foreign import ccall "setTitle" setTitle' :: Ptr () -> CString -> IO ()
 foreign import ccall "newMenu" newMenu' :: CString -> IO (Ptr ())
@@ -32,10 +32,10 @@ foreign import ccall "sendTerminate" sendTerminate :: IO ()
 
 foreign export ccall freeHaskellFunPtr :: FunPtr  (IO ()) -> IO ()
 
-runApp :: Double -> IO () -> IO ()
-runApp d p = do
+runApp :: IO () -> IO ()
+runApp p = do
     p' <- wrap p
-    runApp' d p'
+    runApp' p'
 
 newStatusItem :: IO NSStatusItem
 newStatusItem = do
