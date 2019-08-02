@@ -55,6 +55,12 @@ void freeHaskellFunPtr(void (*ptr)(void));
 
 /******************************************************/
 
+void sendEvent(void)
+{
+	NSEvent *e = [NSEvent otherEventWithType: NSApplicationDefined location: NSZeroPoint modifierFlags: 0 timestamp: 0 windowNumber: 0 context: nil subtype: 12 data1: 0 data2: 0];
+	[NSApp sendEvent: e];
+}
+
 void initApp(void)
 {
 	[NSApplication sharedApplication];
@@ -79,12 +85,17 @@ void setTitle(NSStatusItem *si, char *title)
 
 void runApp(double period, void (*ptr)(void))
 {
-	[NSEvent addLocalMonitorForEventsMatchingMask: NSEventMaskPeriodic handler: ^NSEvent * _Nullable (NSEvent *e){
+	[NSEvent addLocalMonitorForEventsMatchingMask: NSEventMaskApplicationDefined handler: ^NSEvent * _Nullable (NSEvent *e){
 		ptr();
+		printf("Custom event yo!\n");
 		return nil;
 	}];
-	[NSEvent startPeriodicEventsAfterDelay: 0 withPeriod: period];
 	[NSApp run];
+}
+
+void sendTerminate(void)
+{
+	[NSApp terminate: nil];
 }
 
 NSMenu *newMenu(char *title)

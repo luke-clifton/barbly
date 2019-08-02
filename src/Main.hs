@@ -1,10 +1,13 @@
 {-# LANGUAGE ForeignFunctionInterface #-}
+{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ExtendedDefaultRules #-}
 module Main where
 
+import Control.Exception
 import Control.Monad
 import Control.Concurrent
+import Control.Concurrent.Async
 import System.Environment
 import Options.Applicative
 import qualified Data.ByteString.Lazy.Char8 as Char8
@@ -55,12 +58,20 @@ opts = Options <$> parsePeriod <*> parseCommand
 main :: IO ()
 main = do
     os <- execParser $ info (opts <**> helper) fullDesc
+    mv <- newEmptyMVar
     initApp
     p <- newStatusItem
-    let cmd:args = Main.command os
-    runApp (period os) $ do
-        res <- exe cmd args |> capture
-        createMenu p (parse (Char8.toStrict res))
+    let
+        cmd:args = Main.command os
+        runner = forever $ do
+            res <- exe cmd args |> capture
+            putMVar mv (parse (Char8.toStrict res))
+            sendEvent
+            threadDelay (round $ period os * 1000000)
+    withAsync (runner `finally` sendTerminate) $ \_ -> do
+        runInBoundThread $ do
+            runApp (period os) $
+                takeMVar mv >>= createMenu p
 
 parseItem' :: P.Parser MenuItem
 parseItem' = P.choice

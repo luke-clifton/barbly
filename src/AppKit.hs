@@ -27,6 +27,8 @@ foreign import ccall "newSeparator" newSeparator' :: IO (Ptr ())
 foreign import ccall "addMenuItem" addMenuItem' :: Ptr () -> Ptr () -> IO ()
 foreign import ccall "setStatusItemMenu" setStatusItemMenu' :: Ptr ()  -> Ptr () -> IO ()
 foreign import ccall "release" release :: Ptr () -> IO ()
+foreign import ccall "sendEvent" sendEvent :: IO ()
+foreign import ccall "sendTerminate" sendTerminate :: IO ()
 
 foreign export ccall freeHaskellFunPtr :: FunPtr  (IO ()) -> IO ()
 

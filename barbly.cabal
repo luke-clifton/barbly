@@ -20,9 +20,10 @@ executable barbly
   main-is:             Main.hs
   other-modules:       AppKit
   -- other-extensions:
-  build-depends:       base >=4.12 && <4.13, shh, optparse-applicative, attoparsec, bytestring
+  build-depends:       base >=4.12 && <4.13, shh, optparse-applicative, attoparsec, bytestring, async
   hs-source-dirs:      src
   default-language:    Haskell2010
   c-sources: cbits.m
   includes: cbits.h
   frameworks: AppKit
+  ghc-options: -threaded
