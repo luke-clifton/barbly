@@ -11,11 +11,13 @@ OWNER="$1"
 REPO="$2"
 
 printf "%s/%s - " "$1" "$2"
-curl -nsS "${BASE_URL}/repos/$OWNER/$REPO/issues" \
-    | jq -r 'length,(.[] | "\(.title) | href=\(.html_url)")'
+
+curl -nsS "${BASE_URL}/repos/$OWNER/$REPO" \
+    | jq -r '.open_issues,"Go to repository | href=\(.html_url)"'
 
 echo "---"
 
-curl -nsS "${BASE_URL}/repos/$OWNER/$REPO" \
-    | jq -r '"Go to repository | href=\(.html_url)"'
+curl -nsS "${BASE_URL}/repos/$OWNER/$REPO/issues" \
+    | jq -r '(.[] | "\(.title) | href=\(.html_url)")'
+
 
