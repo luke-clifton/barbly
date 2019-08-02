@@ -19,6 +19,15 @@ the contents of the menu, with possible clickable actions.
 Some sample scripts that are useful to use with barbly can be found in the
 [scripts](./scripts) directory.
 
+Here is an example of running the [`github_issues.sh`](./scripts/github_issues.sh)
+script with barbly to monitor for new issues.
+
+    barbly -p 60 ./scripts/github_issues.sh luke-clifton shh
+
+![Example Menu](./doc/demo.png)
+
+Clicking on an item will open the issue in your browser.
+
 ## Syntax
 
 First line creates a title, subsequent lines create menu entries. An entry
@@ -28,16 +37,3 @@ the scheme!) or a file that will be opened with the default viewer.
 
 A line containing only `---` will create a menu separator.
 
-For example, if you write the following script, and call it disks.sh
-
-    #! /usr/bin/env bash
-    
-    echo "Disk Usage"
-    df | tail -n +2 | tr -s ' ' | awk '{print($6" - "$5" | href="$6)}'
-
-You can then run `barbly -p 30 ./disks.sh` to create a status bar menu
-which lists all your disks and how full they are. When you select one
-of the disks from the menu, it will open it in the default viewer for
-directories (probably Finder). It will update every 30 seconds.
-
-![Example Menu](./doc/demo.png)
