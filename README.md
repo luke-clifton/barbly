@@ -22,6 +22,8 @@ that contains a `|` character can provide extra metadata. Currently the
 only supported metadata is `href=`, to which you can supply a URL (include
 the scheme!) or a file that will be opened with the default viewer.
 
+A line containing only `---` will create a menu separator.
+
 For example, if you write the following script, and call it disks.sh
 
     #! /usr/bin/env bash
