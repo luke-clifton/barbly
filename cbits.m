@@ -87,7 +87,6 @@ void runApp(double period, void (*ptr)(void))
 {
 	[NSEvent addLocalMonitorForEventsMatchingMask: NSEventMaskApplicationDefined handler: ^NSEvent * _Nullable (NSEvent *e){
 		ptr();
-		printf("Custom event yo!\n");
 		return nil;
 	}];
 	[NSApp run];
