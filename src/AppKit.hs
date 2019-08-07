@@ -22,13 +22,15 @@ foreign import ccall "runApp" runApp' :: FunPtr (IO ()) -> IO ()
 foreign import ccall "newStatusItem" newStatusItem' :: IO (Ptr ())
 foreign import ccall "setTitle" setTitle' :: Ptr () -> CString -> IO ()
 foreign import ccall "newMenu" newMenu' :: CString -> IO (Ptr ())
-foreign import ccall "newMenuItem" newMenuItem' :: CString -> FunPtr (IO ()) -> IO (Ptr ())
+foreign import ccall "newMenuItem" newMenuItem' :: CString -> IO (Ptr ())
+foreign import ccall "assignAction" assignAction' :: Ptr () -> FunPtr (IO ()) -> IO ()
 foreign import ccall "newSeparator" newSeparator' :: IO (Ptr ())
 foreign import ccall "addMenuItem" addMenuItem' :: Ptr () -> Ptr () -> IO ()
 foreign import ccall "setStatusItemMenu" setStatusItemMenu' :: Ptr ()  -> Ptr () -> IO ()
 foreign import ccall "release" release :: Ptr () -> IO ()
 foreign import ccall "sendEvent" sendEvent :: IO ()
 foreign import ccall "sendTerminate" sendTerminate :: IO ()
+foreign import ccall "assignSubMenu" assignSubMenu' :: Ptr () -> Ptr () -> IO ()
 
 foreign export ccall freeHaskellFunPtr :: FunPtr  (IO ()) -> IO ()
 
@@ -36,6 +38,18 @@ runApp :: IO () -> IO ()
 runApp p = do
     p' <- wrap p
     runApp' p'
+
+assignSubMenu :: NSMenuItem -> NSMenu -> IO ()
+assignSubMenu (NSMenuItem fpmi) (NSMenu fpm) =
+    withForeignPtr fpmi $ \mi ->
+        withForeignPtr fpm $ \m ->
+            assignSubMenu' mi m
+
+assignAction :: NSMenuItem -> IO () -> IO ()
+assignAction (NSMenuItem fpmi) act =
+    withForeignPtr fpmi $ \mi -> do
+        p <- wrap act
+        assignAction' mi p
 
 newStatusItem :: IO NSStatusItem
 newStatusItem = do
@@ -54,13 +68,10 @@ addMenuItem (NSMenu fpm) (NSMenuItem fpmi) =
         withForeignPtr fpmi $ \mi ->
             addMenuItem' m mi
 
-newMenuItem :: ByteString -> Maybe (IO ()) -> IO NSMenuItem
-newMenuItem s a = do
+newMenuItem :: ByteString -> IO NSMenuItem
+newMenuItem s = do
     useAsCString s $ \cs -> do
-        a' <- case a of
-            Just act -> wrap act
-            Nothing  -> pure nullFunPtr
-        p <- newMenuItem' cs a'
+        p <- newMenuItem' cs
         NSMenuItem <$> newForeignPtr p (release p)
 
 newMenu :: ByteString -> IO NSMenu

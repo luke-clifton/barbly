@@ -36,6 +36,19 @@ void freeHaskellFunPtr(void (*ptr)(void));
 
 /******************************************************/
 
+@interface MyEvent : NSEvent
+{
+}
+
+- (void) dealloc;
+@end
+@implementation MyEvent
+- (void) dealloc
+{
+    [super dealloc];
+}
+@end
+
 @interface MyMenuItem : NSMenuItem
 {
 }
@@ -47,17 +60,29 @@ void freeHaskellFunPtr(void (*ptr)(void));
 
 - (void) dealloc
 {
-    if (self.target) [self.target release];
     [super dealloc];
 }
 
+@end
+
+@interface MyMenu : NSMenu
+{
+}
+- (void) dealloc;
+@end
+
+@implementation MyMenu
+- (void) dealloc
+{
+    [super dealloc];
+}
 @end
 
 /******************************************************/
 
 void sendEvent(void)
 {
-    NSEvent *e = [NSEvent otherEventWithType: NSApplicationDefined location: NSZeroPoint modifierFlags: 0 timestamp: 0 windowNumber: 0 context: nil subtype: 12 data1: 0 data2: 0];
+    NSEvent *e = [MyEvent otherEventWithType: NSApplicationDefined location: NSZeroPoint modifierFlags: 0 timestamp: 0 windowNumber: 0 context: nil subtype: 12 data1: 0 data2: 0];
     [NSApp sendEvent: e];
     [e release];
 }
@@ -98,27 +123,35 @@ void sendTerminate(void)
     [NSApp terminate: nil];
 }
 
-NSMenu *newMenu(char *title)
+MyMenu *newMenu(char *title)
 {
     NSString *t = newNSString(title);
-    NSMenu *m = [[NSMenu alloc] initWithTitle: t];
+    MyMenu *m = [[MyMenu alloc] initWithTitle: t];
     [t release];
     return m;
 }
 
-MyMenuItem *newMenuItem(char *title, void (*ptr)(void))
+MyMenuItem *newMenuItem(char *title)
 {
     NSString *t = newNSString(title);
     MyMenuItem *mi = [[MyMenuItem alloc] initWithTitle: t action: NULL keyEquivalent: @""];
     [t release];
-    if (ptr)
-    {
-        IOAction *action = [IOAction alloc];
-        action->ioaction = ptr;
-        mi.target = action;
-        mi.action = @selector(callIOAction);
-    }
     return mi;
+}
+
+void assignAction(MyMenuItem *mi, void (*ptr)(void))
+{
+    IOAction *action = [IOAction alloc];
+    action->ioaction = ptr;
+    mi.target = action;
+    mi.action = @selector(callIOAction);
+    mi.representedObject = action;
+    [action release];
+}
+
+void assignSubMenu(MyMenuItem *mi, MyMenu *m)
+{
+    mi.submenu = m;
 }
 
 NSMenuItem *newSeparator(void)
@@ -126,12 +159,12 @@ NSMenuItem *newSeparator(void)
     return [NSMenuItem separatorItem];
 }
 
-void addMenuItem(NSMenu *m, NSMenuItem *i)
+void addMenuItem(MyMenu *m, NSMenuItem *i)
 {
     [m addItem: i];
 }
 
-void setStatusItemMenu(NSStatusItem *si, NSMenu *m)
+void setStatusItemMenu(NSStatusItem *si, MyMenu *m)
 {
     si.menu = m;
 }
