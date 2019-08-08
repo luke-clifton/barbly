@@ -3,6 +3,7 @@
 {-# LANGUAGE ExtendedDefaultRules #-}
 module AppKit where
 
+import Control.Exception (finally)
 import Control.Monad.Cont
 import Data.ByteString (ByteString, useAsCString)
 import Foreign hiding (newForeignPtr)
@@ -49,24 +50,18 @@ assignAction mi act = do
 newStatusItem :: ContT r IO NSStatusItem
 newStatusItem = ContT $ \go -> do
     si@(NSStatusItem p) <- newStatusItem'
-    r <- go si
-    release p
-    pure r
+    go si `finally` release p
 
 newMenuItem :: ByteString -> ContT r IO NSMenuItem
 newMenuItem s = ContT $ \go -> do
     useAsCString s $ \cs -> do
         mi@(NSMenuItem p) <- newMenuItem' cs
-        r <- go mi
-        release p
-        pure r
+        go mi `finally` release p
 
 newMenu :: ByteString -> ContT r IO NSMenu
 newMenu s = ContT $ \go -> do
     m@(NSMenu p) <- useAsCString s newMenu'
-    r <- go m
-    release p
-    pure r
+    go m `finally` release p
 
 setTitle :: NSStatusItem -> ByteString -> IO ()
 setTitle si s = useAsCString s $ setTitle' si
@@ -74,7 +69,4 @@ setTitle si s = useAsCString s $ setTitle' si
 newSeparator :: ContT r IO NSMenuItem
 newSeparator = ContT $ \go -> do
     mi@(NSMenuItem p) <- newSeparator'
-    r <- go mi
-    -- TODO: Does not like being released. :/
-    -- release p
-    pure r
+    go mi -- Does not need to be released, it's a constant.
