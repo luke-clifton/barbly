@@ -30,10 +30,18 @@ Clicking on an item will open the issue in your browser.
 
 ## Syntax
 
-First line creates a title, subsequent lines create menu entries. An entry
-that contains a `|` character can provide extra metadata. Currently the
-only supported metadata is `href=`, to which you can supply a URL (include
-the scheme!) or a file that will be opened with the default viewer.
+The text that appears in the status bar is the output of the script up until a line
+containing only `---`.
 
-A line containing only `---` will create a menu separator.
+After this, each line represents an item in a drop down menu. Submenus can be nested
+arbitrarily by prefixing the line with `--` (one pair for each level of nesting).
 
+Each line can contain some paramters which appear after the first `|` as key value
+pairs separated by an `=`.
+
+| Paramter Name | Effect                                       | Example                        |
+|---------------|----------------------------------------------|--------------------------------|
+| href          | Open the given URL or file.                  | href=https://www.google.com    |
+|               |                                              | href=/Applications/Firefox.app |
+
+See the scripts in the [scripts](./scripts) directory for some examples.
