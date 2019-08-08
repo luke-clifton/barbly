@@ -13,7 +13,7 @@ REPO="$2"
 printf "%s/%s - " "$1" "$2"
 
 curl -nsS "${BASE_URL}/repos/$OWNER/$REPO" \
-    | jq -r '.open_issues,"Go to repository | href=\(.html_url)"'
+    | jq -r '.open_issues,"---","Go to repository | href=\(.html_url)"'
 
 echo "---"
 
