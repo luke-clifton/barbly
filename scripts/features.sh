@@ -1,21 +1,15 @@
 date
 echo ---
-echo 'A menu | href=https://www.google.com'
-echo "Hello"
-echo "-- Submenu boy"
-echo "---- A subber menu"
-echo "------ A Sub SUB SUBBERR!!"
+echo 'A Link DDG | href=https://duckduckgo.com'
+echo "A Submenu"
+echo "-- A Deeper Menu"
+echo "---- It just keeps going..."
+echo "------ Finally Here"
+echo "------ Nested Separators"
 echo "------ ---"
-echo "------ 12 | href=https://www.cba.com.au"
-echo "-- 111"
-echo "-- Sub  Menu | href=https://www.reddit.com"
+echo "------ Fallback Search Engine | href=https://www.google.com"
+echo "-- Code | href=https://www.gitlab.com"
 echo ---
-echo a
-echo ---
-echo b
-echo ---
-echo c
-echo ---
-echo d
+echo Isolated
 echo ---
 echo "Run a script | bash=/some/script"
