@@ -18,7 +18,6 @@ import Data.IORef
 newtype NSStatusItem = NSStatusItem (Ptr ())
 newtype NSMenu       = NSMenu (Ptr ())
 newtype NSMenuItem   = NSMenuItem (Ptr ())
-newtype IOAction     = IOAction (FunPtr (IO ()))
 
 foreign import ccall "wrapper" wrap :: IO () -> IO (FunPtr (IO ()))
 foreign import ccall "initApp" initApp :: IO ()
@@ -33,7 +32,6 @@ foreign import ccall "addMenuItem" addMenuItem :: NSMenu -> NSMenuItem -> IO ()
 foreign import ccall "setStatusItemMenu" setStatusItemMenu :: NSStatusItem  -> NSMenu -> IO ()
 foreign import ccall "release" release :: Ptr () -> IO ()
 foreign import ccall "sendEvent" sendEvent :: IO ()
-foreign import ccall "sendTerminate" sendTerminate :: IO ()
 foreign import ccall "assignSubMenu" assignSubMenu :: NSMenuItem -> NSMenu -> IO ()
 foreign export ccall freeHaskellFunPtr :: FunPtr  (IO ()) -> IO ()
 

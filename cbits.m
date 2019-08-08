@@ -75,11 +75,6 @@ void runApp(void (*ptr)(void))
     [NSApp run];
 }
 
-void sendTerminate(void)
-{
-    [NSApp terminate: nil];
-}
-
 NSMenu *newMenu(char *title)
 {
     NSString *t = newNSString(title);
