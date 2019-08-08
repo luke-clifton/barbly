@@ -3,7 +3,7 @@
 {-# LANGUAGE ExtendedDefaultRules #-}
 module AppKit where
 
-import Control.Exception (finally)
+import Control.Exception (finally, handle, SomeException(..))
 import Control.Monad.Cont
 import Data.ByteString (ByteString, useAsCString)
 import Foreign hiding (newForeignPtr)
@@ -44,7 +44,9 @@ runApp p = do
 
 assignAction :: NSMenuItem -> IO () -> IO ()
 assignAction mi act = do
-    ioact <- wrap act
+    -- We simply handle any exceptions by printing them. No need
+    -- to take down the whole process.
+    ioact <- wrap (handle (\s@SomeException{} -> print s) act)
     liftIO $ assignAction' mi ioact
 
 newStatusItem :: ContT r IO NSStatusItem

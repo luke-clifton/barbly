@@ -17,6 +17,7 @@ import Data.ByteString.Lazy (toStrict, fromStrict)
 import Data.Char
 import Options.Applicative
 import Shh
+import Shh.Internal
 
 import AppKit
 
@@ -78,12 +79,13 @@ main = runInBoundThread $ do
             cmd:args = Main.command os
 
             runner = forever $ do
-                res <- exe cmd args |> capture
-                putMVar mv (parse (toStrict res))
+                tryFailure (exe cmd args |> capture) >>= \case
+                    Left f -> print f >> putMVar mv (Menu "Error!" [MenuInfo "See process output for details."])
+                    Right res -> putMVar mv (parse (toStrict res))
                 sendEvent
                 threadDelay (round $ period os * 1000000)
 
-        withAsync (runner `finally` sendTerminate) $ \_ -> do
+        withAsync (runner) $ \_ -> do
             runApp $ takeMVar mv >>= \menu -> do
                 runContT (createMenu menu) $ \nsmenu -> do
                     setTitle si (title menu)
