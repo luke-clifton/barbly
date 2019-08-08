@@ -64,7 +64,7 @@ opts :: Parser Options
 opts = Options <$> parsePeriod <*> parseCommand
     where
         parsePeriod :: Parser Double
-        parsePeriod = option auto (long "period" <> short 'p' <> help "Period between running the command")
+        parsePeriod = option auto (long "period" <> short 'p' <> help "Period between running the command" <> metavar "SECONDS")
 
         parseCommand :: Parser [String]
         parseCommand = (:) <$> strArgument (metavar "CMD" <> help "Command to run") <*> many (strArgument (metavar "ARGS"))
