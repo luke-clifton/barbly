@@ -124,7 +124,7 @@ parseItem lev = parseLevelIndicator *> P.choice
         parseBash = exe "bash" . fromStrict <$> (P.string "bash=" *> parseString)
 
 parseString :: P.Parser ByteString
-parseString = P.choice [raw, quoted]
+parseString = P.choice [quoted,raw]
     where
         quoted = do
             P.char '"'
