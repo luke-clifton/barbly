@@ -24,19 +24,13 @@ import AppKit
 data Menu = Menu
     { title :: ByteString
     , items :: [MenuItem]
-    } deriving (Show)
+    }
 
 data MenuItem
     = MenuSeparator
     | MenuInfo ByteString
     | MenuAction ByteString (IO ())
     | MenuSub Menu
-
-instance Show MenuItem where
-    show MenuSeparator = "MenuSeparator"
-    show MenuInfo{}    = "MenuInfo"
-    show MenuAction{}  = "MenuAction"
-    show (MenuSub m)   = "MenuSub " ++ show m
 
 createMenu :: Menu -> ContT r IO NSMenu
 createMenu m = do
