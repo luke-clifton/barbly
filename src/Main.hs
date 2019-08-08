@@ -14,6 +14,7 @@ import qualified Data.Attoparsec.ByteString.Char8 as P
 import Data.ByteString (ByteString)
 import qualified Data.ByteString.Char8 as Char8
 import Data.ByteString.Lazy (toStrict, fromStrict)
+import Data.Char
 import Options.Applicative
 import Shh
 
@@ -114,8 +115,28 @@ parseItem lev = parseLevelIndicator *> P.choice
         parseBody = P.takeTill (\s -> s == '|' || s == '\n')
         parseAction = (P.char '|' >> P.skipSpace) *> P.choice
             [ parseURL
+            , parseBash
             ] <* P.endOfLine
-        parseURL = exe "open" . fromStrict  <$> (P.string "href=" *> P.takeWhile (/='\n'))
+        parseURL = exe "open" . fromStrict  <$> (P.string "href=" *> parseString)
+        parseBash = exe "bash" . fromStrict <$> (P.string "bash=" *> parseString)
+
+parseString :: P.Parser ByteString
+parseString = P.choice [raw, quoted]
+    where
+        quoted = do
+            P.char '"'
+            s <- parseU ""
+            pure (Char8.pack $ reverse s)
+        parseU :: String -> P.Parser String
+        parseU s = do
+            P.anyChar >>= \case
+                '"'  -> pure s
+                '\\' -> P.anyChar >>= \case
+                    'n' -> parseU ('\n':s)
+                    c   -> parseU (c:s)
+                '\n' -> fail "Unexpected newline"
+                c    -> parseU (c:s)
+        raw = P.takeWhile (\c -> isAlphaNum c || c `elem` "./()[]{}!@#$%^&*,:;\\")
 
 parseTitle :: P.Parser ByteString
 parseTitle = toStrict . trim . fromStrict . Char8.pack <$> P.manyTill P.anyChar (void (P.string "---\n") <|> P.endOfInput)

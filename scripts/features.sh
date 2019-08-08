@@ -18,3 +18,4 @@ echo c
 echo ---
 echo d
 echo ---
+echo "Run a script | bash=/some/script"

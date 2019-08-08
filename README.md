@@ -43,6 +43,7 @@ pairs separated by an `=`.
 |---------------|----------------------------------------------|--------------------------------|
 | href          | Open the given URL or file.                  | href=https://www.google.com    |
 |               |                                              | href=/Applications/Firefox.app |
+| bash          | Run the given bash script                    | bash=/my/script.bash           |
 
 Menu separators can be created with lines containing only `---`.
 
