@@ -3,8 +3,10 @@
 {-# LANGUAGE ExtendedDefaultRules #-}
 module AppKit where
 
+import Control.Monad.Cont
 import Data.ByteString (ByteString, useAsCString)
 import Foreign hiding (newForeignPtr)
+import qualified Foreign
 import Control.Concurrent
 import Foreign.C
 import Foreign.Ptr
@@ -12,26 +14,26 @@ import Foreign.Concurrent
 import Foreign.Marshal
 import Data.IORef
 
-newtype NSStatusItem = NSStatusItem (ForeignPtr ())
-newtype NSMenu       = NSMenu (ForeignPtr ())
-newtype NSMenuItem   = NSMenuItem (ForeignPtr ())
+newtype NSStatusItem = NSStatusItem (Ptr ())
+newtype NSMenu       = NSMenu (Ptr ())
+newtype NSMenuItem   = NSMenuItem (Ptr ())
+newtype IOAction     = IOAction (FunPtr (IO ()))
 
 foreign import ccall "wrapper" wrap :: IO () -> IO (FunPtr (IO ()))
 foreign import ccall "initApp" initApp :: IO ()
 foreign import ccall "runApp" runApp' :: FunPtr (IO ()) -> IO ()
-foreign import ccall "newStatusItem" newStatusItem' :: IO (Ptr ())
-foreign import ccall "setTitle" setTitle' :: Ptr () -> CString -> IO ()
-foreign import ccall "newMenu" newMenu' :: CString -> IO (Ptr ())
-foreign import ccall "newMenuItem" newMenuItem' :: CString -> IO (Ptr ())
-foreign import ccall "assignAction" assignAction' :: Ptr () -> FunPtr (IO ()) -> IO ()
-foreign import ccall "newSeparator" newSeparator' :: IO (Ptr ())
-foreign import ccall "addMenuItem" addMenuItem' :: Ptr () -> Ptr () -> IO ()
-foreign import ccall "setStatusItemMenu" setStatusItemMenu' :: Ptr ()  -> Ptr () -> IO ()
+foreign import ccall "newStatusItem" newStatusItem' :: IO NSStatusItem
+foreign import ccall "setTitle" setTitle' :: NSStatusItem -> CString -> IO ()
+foreign import ccall "newMenu" newMenu' :: CString -> IO NSMenu
+foreign import ccall "newMenuItem" newMenuItem' :: CString -> IO NSMenuItem
+foreign import ccall "assignAction" assignAction' :: NSMenuItem -> FunPtr (IO ()) -> IO ()
+foreign import ccall "newSeparator" newSeparator' :: IO NSMenuItem
+foreign import ccall "addMenuItem" addMenuItem :: NSMenu -> NSMenuItem -> IO ()
+foreign import ccall "setStatusItemMenu" setStatusItemMenu :: NSStatusItem  -> NSMenu -> IO ()
 foreign import ccall "release" release :: Ptr () -> IO ()
 foreign import ccall "sendEvent" sendEvent :: IO ()
 foreign import ccall "sendTerminate" sendTerminate :: IO ()
-foreign import ccall "assignSubMenu" assignSubMenu' :: Ptr () -> Ptr () -> IO ()
-
+foreign import ccall "assignSubMenu" assignSubMenu :: NSMenuItem -> NSMenu -> IO ()
 foreign export ccall freeHaskellFunPtr :: FunPtr  (IO ()) -> IO ()
 
 runApp :: IO () -> IO ()
@@ -39,52 +41,40 @@ runApp p = do
     p' <- wrap p
     runApp' p'
 
-assignSubMenu :: NSMenuItem -> NSMenu -> IO ()
-assignSubMenu (NSMenuItem fpmi) (NSMenu fpm) =
-    withForeignPtr fpmi $ \mi ->
-        withForeignPtr fpm $ \m ->
-            assignSubMenu' mi m
-
 assignAction :: NSMenuItem -> IO () -> IO ()
-assignAction (NSMenuItem fpmi) act =
-    withForeignPtr fpmi $ \mi -> do
-        p <- wrap act
-        assignAction' mi p
+assignAction mi act = do
+    ioact <- wrap act
+    liftIO $ assignAction' mi ioact
 
-newStatusItem :: IO NSStatusItem
-newStatusItem = do
-    p <- newStatusItem'
-    NSStatusItem <$> newForeignPtr p (release p)
+newStatusItem :: ContT r IO NSStatusItem
+newStatusItem = ContT $ \go -> do
+    si@(NSStatusItem p) <- newStatusItem'
+    r <- go si
+    release p
+    pure r
 
-setStatusItemMenu :: NSStatusItem -> NSMenu -> IO ()
-setStatusItemMenu (NSStatusItem fpsi) (NSMenu fpm) =
-    withForeignPtr fpsi $ \si ->
-        withForeignPtr fpm $ \m ->
-            setStatusItemMenu' si m
-
-addMenuItem :: NSMenu -> NSMenuItem -> IO ()
-addMenuItem (NSMenu fpm) (NSMenuItem fpmi) =
-    withForeignPtr fpm $ \m ->
-        withForeignPtr fpmi $ \mi ->
-            addMenuItem' m mi
-
-newMenuItem :: ByteString -> IO NSMenuItem
-newMenuItem s = do
+newMenuItem :: ByteString -> ContT r IO NSMenuItem
+newMenuItem s = ContT $ \go -> do
     useAsCString s $ \cs -> do
-        p <- newMenuItem' cs
-        NSMenuItem <$> newForeignPtr p (release p)
+        mi@(NSMenuItem p) <- newMenuItem' cs
+        r <- go mi
+        release p
+        pure r
 
-newMenu :: ByteString -> IO NSMenu
-newMenu s = do
-    p <- useAsCString s newMenu'
-    NSMenu <$> newForeignPtr p (release p)
+newMenu :: ByteString -> ContT r IO NSMenu
+newMenu s = ContT $ \go -> do
+    m@(NSMenu p) <- useAsCString s newMenu'
+    r <- go m
+    release p
+    pure r
 
 setTitle :: NSStatusItem -> ByteString -> IO ()
-setTitle (NSStatusItem fpsi) s = do
-    withForeignPtr fpsi $ \si ->
-        useAsCString s $ setTitle' si
+setTitle si s = useAsCString s $ setTitle' si
 
-newSeparator :: IO NSMenuItem
-newSeparator = do
-    p <- newSeparator'
-    NSMenuItem <$> newForeignPtr p (pure ())
+newSeparator :: ContT r IO NSMenuItem
+newSeparator = ContT $ \go -> do
+    mi@(NSMenuItem p) <- newSeparator'
+    r <- go mi
+    -- TODO: Does not like being released. :/
+    -- release p
+    pure r

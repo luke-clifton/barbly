@@ -8,6 +8,7 @@ void release(id o)
     [o release];
 }
 
+
 void freeHaskellFunPtr(void (*ptr)(void));
 
 @interface IOAction : NSObject
@@ -36,54 +37,10 @@ void freeHaskellFunPtr(void (*ptr)(void));
 
 /******************************************************/
 
-@interface MyEvent : NSEvent
-{
-}
-
-- (void) dealloc;
-@end
-@implementation MyEvent
-- (void) dealloc
-{
-    [super dealloc];
-}
-@end
-
-@interface MyMenuItem : NSMenuItem
-{
-}
-
-- (void) dealloc;
-@end
-
-@implementation MyMenuItem
-
-- (void) dealloc
-{
-    [super dealloc];
-}
-
-@end
-
-@interface MyMenu : NSMenu
-{
-}
-- (void) dealloc;
-@end
-
-@implementation MyMenu
-- (void) dealloc
-{
-    [super dealloc];
-}
-@end
-
-/******************************************************/
-
 void sendEvent(void)
 {
-    NSEvent *e = [MyEvent otherEventWithType: NSApplicationDefined location: NSZeroPoint modifierFlags: 0 timestamp: 0 windowNumber: 0 context: nil subtype: 12 data1: 0 data2: 0];
-    [NSApp sendEvent: e];
+    NSEvent *e = [NSEvent otherEventWithType: NSApplicationDefined location: NSZeroPoint modifierFlags: 0 timestamp: 0 windowNumber: 0 context: nil subtype: 12 data1: 0 data2: 0];
+    [NSApp postEvent: e atStart: NO];
     [e release];
 }
 
@@ -97,15 +54,15 @@ NSStatusItem *newStatusItem(void)
     return [[NSStatusBar systemStatusBar] statusItemWithLength:NSVariableStatusItemLength];
 }
 
-NSString *newNSString(char *str)
+NSString *newNSString(char *volatile str)
 {
-    return [[NSString string] initWithUTF8String: str];
+    return [[NSString alloc] initWithUTF8String: str];
 }
 
 void setTitle(NSStatusItem *si, char *title)
 {
     NSString *t = newNSString(title);
-    si.button.title = t;
+    si.title = t;
     [t release];
 }
 
@@ -123,23 +80,23 @@ void sendTerminate(void)
     [NSApp terminate: nil];
 }
 
-MyMenu *newMenu(char *title)
+NSMenu *newMenu(char *title)
 {
     NSString *t = newNSString(title);
-    MyMenu *m = [[MyMenu alloc] initWithTitle: t];
+    NSMenu *r = [[NSMenu alloc] initWithTitle: t];
     [t release];
-    return m;
+    return r;
 }
 
-MyMenuItem *newMenuItem(char *title)
+NSMenuItem *newMenuItem(char *title)
 {
     NSString *t = newNSString(title);
-    MyMenuItem *mi = [[MyMenuItem alloc] initWithTitle: t action: NULL keyEquivalent: @""];
+    NSMenuItem *r = [[NSMenuItem alloc] initWithTitle: t action: NULL keyEquivalent: @""];
     [t release];
-    return mi;
+    return r;
 }
 
-void assignAction(MyMenuItem *mi, void (*ptr)(void))
+void assignAction(NSMenuItem *mi, void (*ptr)(void))
 {
     IOAction *action = [IOAction alloc];
     action->ioaction = ptr;
@@ -149,7 +106,7 @@ void assignAction(MyMenuItem *mi, void (*ptr)(void))
     [action release];
 }
 
-void assignSubMenu(MyMenuItem *mi, MyMenu *m)
+void assignSubMenu(NSMenuItem *mi, NSMenu *m)
 {
     mi.submenu = m;
 }
@@ -159,13 +116,12 @@ NSMenuItem *newSeparator(void)
     return [NSMenuItem separatorItem];
 }
 
-void addMenuItem(MyMenu *m, NSMenuItem *i)
+void addMenuItem(NSMenu *m, NSMenuItem *i)
 {
     [m addItem: i];
 }
 
-void setStatusItemMenu(NSStatusItem *si, MyMenu *m)
+void setStatusItemMenu(NSStatusItem *si, NSMenu *m)
 {
     si.menu = m;
 }
-

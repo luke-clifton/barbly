@@ -4,6 +4,8 @@
 {-# LANGUAGE ExtendedDefaultRules #-}
 module Main where
 
+import Control.Monad.Cont
+import Foreign (withForeignPtr)
 import Control.Concurrent
 import Control.Concurrent.Async
 import Control.Exception
@@ -20,7 +22,7 @@ import AppKit
 data Menu = Menu
     { title :: ByteString
     , items :: [MenuItem]
-    }
+    } deriving (Show)
 
 data MenuItem
     = MenuSeparator
@@ -28,21 +30,27 @@ data MenuItem
     | MenuAction ByteString (IO ())
     | MenuSub Menu
 
-createMenu :: Menu -> IO NSMenu
+instance Show MenuItem where
+    show MenuSeparator = "MenuSeparator"
+    show MenuInfo{}    = "MenuInfo"
+    show MenuAction{}  = "MenuAction"
+    show (MenuSub m)   = "MenuSub " ++ show m
+
+createMenu :: Menu -> ContT r IO NSMenu
 createMenu m = do
     nm <- newMenu (title m)
-    mapM_ (\mi -> createMenuItem mi >>= addMenuItem nm) (items m)
+    mapM_ (\mi -> createMenuItem mi >>= liftIO . addMenuItem nm) (items m)
     pure nm
 
     where
-        createMenuItem :: MenuItem -> IO NSMenuItem
+        createMenuItem :: MenuItem -> ContT r IO NSMenuItem
         createMenuItem (MenuInfo s) = newMenuItem s
-        createMenuItem (MenuAction s a) = newMenuItem s >>= \mi -> assignAction mi a >> pure mi
+        createMenuItem (MenuAction s a) = newMenuItem s >>= \mi -> liftIO (assignAction mi a) >> pure mi
         createMenuItem MenuSeparator = newSeparator
         createMenuItem (MenuSub sm) = do
             nssm <- createMenu sm
             mi <- newMenuItem (title sm)
-            assignSubMenu mi nssm
+            liftIO $ assignSubMenu mi nssm
             pure mi
 
 data Options = Options
@@ -64,31 +72,36 @@ main = runInBoundThread $ do
     os <- execParser $ info (opts <**> helper) fullDesc
     mv <- newEmptyMVar
     initApp
-    si <- newStatusItem
-    let
-        cmd:args = Main.command os
+    runContT newStatusItem $ \si -> do
+        let
+            cmd:args = Main.command os
 
-        runner = forever $ do
-            res <- exe cmd args |> capture
-            putMVar mv (parse (toStrict res))
-            sendEvent
-            threadDelay (round $ period os * 1000000)
+            runner = forever $ do
+                res <- exe cmd args |> capture
+                putMVar mv (parse (toStrict res))
+                sendEvent
+                threadDelay (round $ period os * 1000000)
 
-    withAsync (runner `finally` sendTerminate) $ \_ -> do
-        runApp $ takeMVar mv >>= \menu -> do
-            nsmenu <- createMenu menu
-            setTitle si (title menu)
-            setStatusItemMenu si nsmenu
+        withAsync (runner `finally` sendTerminate) $ \_ -> do
+            runApp $ takeMVar mv >>= \menu -> do
+                runContT (createMenu menu) $ \nsmenu -> do
+                    setTitle si (title menu)
+                    setStatusItemMenu si nsmenu
 
 -- BitBar compatible Parser
 parseItem :: Int -> P.Parser MenuItem
-parseItem lev = P.count lev (P.string "--") *> P.skipSpace *> P.choice
+parseItem lev = parseLevelIndicator *> P.choice
     [ parseSep
     , parseMAction
     , parseSubMenu
     , parseInfo
     ]
     where
+        parseLevelIndicator :: P.Parser ()
+        parseLevelIndicator = do
+            P.count lev (P.string "--")
+            when (lev > 0) $ void $ P.space
+
         parseSubMenu = do
             t <- P.takeWhile (/= '\n')
             P.endOfLine
@@ -105,7 +118,7 @@ parseItem lev = P.count lev (P.string "--") *> P.skipSpace *> P.choice
         parseURL = exe "open" . fromStrict  <$> (P.string "href=" *> P.takeWhile (/='\n'))
 
 parseTitle :: P.Parser ByteString
-parseTitle = toStrict . trim . fromStrict . Char8.pack <$> P.manyTill P.anyChar (void (P.string "---") <|> P.endOfInput)
+parseTitle = toStrict . trim . fromStrict . Char8.pack <$> P.manyTill P.anyChar (void (P.string "---\n") <|> P.endOfInput)
 
 parseMenu :: P.Parser Menu
 parseMenu = Menu <$> parseTitle <*> many (parseItem 0)
