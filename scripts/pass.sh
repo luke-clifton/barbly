@@ -13,7 +13,7 @@ secrets() {
 	do
 		if [ -f "$s" ]
 		then
-			echo "$level $(basename $s) | bash=pass param1=show param2=-c param3=$(dirname "$s")/$(basename "$s" .gpg)"
+			echo "$level $(basename $s .gpg) | bash=pass param1=show param2=-c param3=$(dirname "$s")/$(basename "$s" .gpg)"
 		elif [ -d "$s" ]
 		then
 			echo "$level $(basename $s)"
