@@ -139,7 +139,7 @@ parseString = P.choice [quoted,raw]
                     c   -> parseU (c:s)
                 '\n' -> fail "Unexpected newline"
                 c    -> parseU (c:s)
-        raw = P.takeWhile (\c -> isAlphaNum c || c `elem` "./()[]{}!@#$%^&*,:;\\")
+        raw = P.takeWhile (\c -> isAlphaNum c || c `elem` "./()[]{}!@#$%^&*,:;-\\")
 
 parseTitle :: P.Parser ByteString
 parseTitle = toStrict . trim . fromStrict . Char8.pack <$> P.manyTill P.anyChar (void (P.string "---\n") <|> P.endOfInput)
