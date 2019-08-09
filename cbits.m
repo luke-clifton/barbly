@@ -39,7 +39,7 @@ void freeHaskellFunPtr(void (*ptr)(void));
 
 void sendEvent(void)
 {
-    NSEvent *e = [NSEvent otherEventWithType: NSApplicationDefined location: NSZeroPoint modifierFlags: 0 timestamp: 0 windowNumber: 0 context: nil subtype: 12 data1: 0 data2: 0];
+    NSEvent *e = [NSEvent otherEventWithType: NSEventTypeApplicationDefined location: NSZeroPoint modifierFlags: 0 timestamp: 0 windowNumber: 0 context: nil subtype: 12 data1: 0 data2: 0];
     [NSApp postEvent: e atStart: NO];
     [e release];
 }
