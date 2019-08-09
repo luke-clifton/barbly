@@ -41,9 +41,10 @@ pairs separated by an `=`.
 
 | Paramter Name | Effect                                       | Example                        |
 |---------------|----------------------------------------------|--------------------------------|
-| href          | Open the given URL or file.                  | href=https://www.google.com    |
+| `href`        | Open the given URL or file.                  | href=https://www.google.com    |
 |               |                                              | href=/Applications/Firefox.app |
-| bash          | Run the given bash script                    | bash=/my/script.bash           |
+| `bash`        | Run the given bash script                    | bash=/my/script.bash           |
+| `paramX`      | Arguments to pass to the bash script above   | bash=/script.sh param1=5 param2=example |
 
 Menu separators can be created with lines containing only `---`.
 

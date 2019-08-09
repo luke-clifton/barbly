@@ -121,7 +121,19 @@ parseItem lev = parseLevelIndicator *> P.choice
             , parseBash
             ] <* P.endOfLine
         parseURL = exe "open" . fromStrict  <$> (P.string "href=" *> parseString)
-        parseBash = exe "bash" . fromStrict <$> (P.string "bash=" *> parseString)
+        parseBash = do
+            P.string "bash="
+            cmd <- parseString
+            params <- P.choice [parseParams 1, pure []]
+            pure $ exe "bash" (fromStrict cmd) (map fromStrict params)
+        parseParams :: Int -> P.Parser [ByteString]
+        parseParams i = do
+            P.skipSpace
+            P.string "param"
+            P.string (Char8.pack $ show i)
+            P.char '='
+            s <- parseString
+            P.choice [(s:) <$> parseParams (succ i), pure [s]]
 
 parseString :: P.Parser ByteString
 parseString = P.choice [quoted,raw]
