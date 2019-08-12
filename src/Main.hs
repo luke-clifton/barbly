@@ -54,15 +54,15 @@ data Options = Options
     , command :: [String]
     } deriving Show
 
-opts :: Parser Options
-opts = Options <$> parsePeriod <*> parseCommand
+optionParser :: Parser Options
+optionParser = Options <$> parsePeriod <*> parseCommand
     where
         parsePeriod :: Parser Double
         parsePeriod = option auto
             (  long "period"
             <> short 'p'
             <> value 300
-            <> help "Period between running the command, in seconds (default 300)"
+            <> help "Period between running the command in seconds (default 300)"
             <> metavar "SECONDS"
             )
 
@@ -73,22 +73,28 @@ opts = Options <$> parsePeriod <*> parseCommand
 
 main :: IO ()
 main = runInBoundThread $ do
-    os <- execParser $ info (opts <**> helper) fullDesc
-    mv <- newEmptyMVar
+    opts <- execParser $ info (optionParser <**> helper) fullDesc
+    mvMenu <- newEmptyMVar
     initApp
     runContT newStatusItem $ \si -> do
         let
-            cmd:args = Main.command os
+            cmd:args = Main.command opts
 
             runner = forever $ do
                 tryFailure (exe cmd args |> capture) >>= \case
-                    Left f -> print f >> putMVar mv (Menu "Error!" [MenuInfo "See process output for details."])
-                    Right res -> putMVar mv (parse (toStrict res))
+                    Left f -> do
+                        print f
+                        putMVar mvMenu
+                            ( Menu "Error!"
+                                [MenuInfo "See process output for details."
+                                ]
+                            )
+                    Right res -> putMVar mvMenu (parse (toStrict res))
                 sendEvent
-                threadDelay (round $ period os * 1000000)
+                threadDelay (round $ period opts * 1000000)
 
         withAsync (runner) $ \_ -> do
-            runApp $ takeMVar mv >>= \menu -> do
+            runApp $ takeMVar mvMenu >>= \menu -> do
                 runContT (createMenu menu) $ \nsmenu -> do
                     setTitle si (title menu)
                     setStatusItemMenu si nsmenu
