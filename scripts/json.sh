@@ -1,15 +1,15 @@
 #! /usr/bin/env bash
 
 jq -n '
-    { title: "Hello"
+    { title: "Example"
     , items:
-        [ { label: "Welp", exec:["say","welp"]}
-        , { label: "sdA", items:[]}
+        [ { label: "Say Hello", exec:["say", "Hello"]}
+        , { }
         , { label: "Sub Menu"
           , items:
-            [ {label: "Ok", exec: ["open", "https://www.google.com"]}
-            , {label: "You?"}
+            [ {label: "DuckDuckGo", exec: ["open", "https://duckduckgo.com/"]}
             ]
           }
+        , { label: "Information Only" }
         ]
     }'

@@ -7,13 +7,6 @@ syntax.
 Each instance of a barbly executable creates only one menu item. You specify
 the period at which to refresh, and the command to generate the menu contents.
 
-The first line becomes the title of the menu, and subsequent items become
-the contents of the menu, with possible clickable actions.
-
-    # Create a clock based on the output of the `date` command. Updates every
-    # second.
-    barbly --period 1 date
-
 ## Sample Scripts
 
 Some sample scripts that are useful to use with barbly can be found in the
@@ -29,6 +22,50 @@ script with barbly to monitor for new issues.
 Clicking on an item will open the issue in your browser.
 
 ## Syntax
+
+Barbly can decode either JSON objects or BitBar syntax for the script outputs.
+By default, it will attempt to auto-detect the format, but you can explicitly
+tell it which format to use with the `--json` and `--bitbar` flags.
+
+### JSON
+
+The top level object has two fields, `title`, which is a string that will
+be displayed in the status bar, and `items` which is an array of menu items
+that will be displayed in the drop down menu when the title is clicked.
+
+Each menu item is either `{}`, which creates a menu separator, or an object
+with a `label` field, which will be the text for that menu item. Optionally
+a menu item can have either an `exec` or a `items` field. An `items` field
+would contain an array of menu items and would create a sub-menu. An `exec`
+field would create a clickable menu item which executes the command described
+by the array of strings in the `exec` field.
+
+```json
+{
+  "title": "Example",
+  "items": [
+    {
+      "label": "Say Hello",
+      "exec": [ "say", "Hello" ]
+    },
+    {},
+    {
+      "label": "Sub Menu",
+      "items": [
+        {
+          "label": "DuckDuckGo",
+          "exec": [ "open", "https://duckduckgo.com/" ]
+        }
+      ]
+    },
+    { "label": "Information Only" }
+  ]
+}
+```
+
+### BitBar
+
+The bitbar simulation is not complete. Only the following features are supported.
 
 The text that appears in the status bar is the output of the script up until a line
 containing only `---`.
