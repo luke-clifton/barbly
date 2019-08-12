@@ -61,7 +61,8 @@ opts = Options <$> parsePeriod <*> parseCommand
         parsePeriod = option auto
             (  long "period"
             <> short 'p'
-            <> help "Period between running the command, in seconds"
+            <> value 300
+            <> help "Period between running the command, in seconds (default 300)"
             <> metavar "SECONDS"
             )
 
