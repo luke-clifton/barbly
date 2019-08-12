@@ -242,6 +242,10 @@ parseJSON s = case JSON.eitherDecodeStrict' s of
         ++ [MenuRaw "Open JSON document" (writeOutput s |> exe "open" "-f")]
     Right m -> m
 
+-- | Parse auto attempts to detect if this is meant to be a JSON object by looking
+-- for a leading @{@. If it is, it assumes JSON output, and will report errors
+-- as such. If the first non-whitespace character is anything else, it will assume
+-- bitbar syntax.
 parseAuto :: ByteString -> Menu
 parseAuto s = case Char8.uncons (Char8.dropWhile isSpace s) of
     Just ('{',_) -> parseJSON s
