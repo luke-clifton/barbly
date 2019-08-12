@@ -14,6 +14,9 @@ import Foreign.Ptr
 import Foreign.Concurrent
 import Foreign.Marshal
 import Data.IORef
+import Data.Text (Text)
+import qualified Data.Text as Text
+import qualified Data.Text.Encoding as Text
 
 newtype NSStatusItem = NSStatusItem (Ptr ())
 newtype NSMenu       = NSMenu (Ptr ())
@@ -52,19 +55,19 @@ newStatusItem = ContT $ \go -> do
     si@(NSStatusItem p) <- newStatusItem'
     go si `finally` release p
 
-newMenuItem :: ByteString -> ContT r IO NSMenuItem
+newMenuItem :: Text -> ContT r IO NSMenuItem
 newMenuItem s = ContT $ \go -> do
-    useAsCString s $ \cs -> do
+    useAsCString (Text.encodeUtf8 s) $ \cs -> do
         mi@(NSMenuItem p) <- newMenuItem' cs
         go mi `finally` release p
 
-newMenu :: ByteString -> ContT r IO NSMenu
+newMenu :: Text -> ContT r IO NSMenu
 newMenu s = ContT $ \go -> do
-    m@(NSMenu p) <- useAsCString s newMenu'
+    m@(NSMenu p) <- useAsCString (Text.encodeUtf8 s) newMenu'
     go m `finally` release p
 
-setTitle :: NSStatusItem -> ByteString -> IO ()
-setTitle si s = useAsCString s $ setTitle' si
+setTitle :: NSStatusItem -> Text -> IO ()
+setTitle si s = useAsCString (Text.encodeUtf8 s) $ setTitle' si
 
 newSeparator :: ContT r IO NSMenuItem
 newSeparator = ContT $ \go -> do
