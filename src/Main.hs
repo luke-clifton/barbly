@@ -34,13 +34,13 @@ import AppKit
 data Menu = Menu
     { title :: Text
     , items :: [MenuItem]
-    } deriving (Show, Generic, JSON.FromJSON, JSON.ToJSON)
+    } deriving (Generic, JSON.FromJSON, JSON.ToJSON)
 
 data MenuItem
     = MenuSeparator
     | MenuItem {label :: Text, exec :: [Text]}
+    | MenuRaw  {label :: Text, runio :: IO ()}
     | MenuSub Menu
-    deriving (Show)
 
 -- Custom parser to get better error messages.
 instance JSON.FromJSON MenuItem where
@@ -65,7 +65,7 @@ instance JSON.FromJSON MenuItem where
                         Left  j -> MenuSub . Menu t <$> JSON.parseJSON j <?> JSON.Key "items"
 
 instance JSON.ToJSON MenuItem where
-    -- toJSON = JSON.genericToJSON menuItemOpts 
+    toJSON MenuRaw{} = error "Attempting to serialise internal structure"
     toJSON MenuSeparator = JSON.object []
     toJSON (MenuItem t e) = JSON.object
         [ ("label", JSON.toJSON t)
@@ -88,6 +88,10 @@ createMenu m = do
         createMenuItem (MenuItem s (cmd:args)) = do
             mi <- newMenuItem s
             liftIO (assignAction mi (exe (Text.encodeUtf8 cmd) (map Text.encodeUtf8 args)))
+            pure mi
+        createMenuItem (MenuRaw t a) = do
+            mi <- newMenuItem t
+            liftIO (assignAction mi a)
             pure mi
         createMenuItem MenuSeparator = newSeparator
         createMenuItem (MenuSub sm) = do
@@ -226,12 +230,16 @@ parseMenu = Menu <$> parseTitle <*> many (parseItem 0)
 
 parseBitBar :: ByteString -> Menu
 parseBitBar s = case P.parseOnly parseMenu (Text.decodeUtf8 s) of
-    Left e -> Menu "Error parsing bitbar syntax" [MenuItem l [] | l <- Text.lines (Text.pack e)]
+    Left e -> Menu "Error parsing bitbar syntax"
+        [ MenuRaw "Show document" (writeOutput s |> exe "open" "-f")
+        ]
     Right m -> m
 
 parseJSON :: ByteString -> Menu
 parseJSON s = case JSON.eitherDecodeStrict' s of
-    Left e -> Menu "Error parsing json" [MenuItem l [] | l <- Text.lines (Text.pack e)]
+    Left e -> Menu "Error parsing json" $
+        [MenuItem l [] | l <- Text.lines (Text.pack e)]
+        ++ [MenuRaw "Open JSON document" (writeOutput s |> exe "open" "-f")]
     Right m -> m
 
 parseAuto :: ByteString -> Menu
