@@ -21,7 +21,8 @@ import Data.Char
 import Options.Applicative
 import Shh
 import Shh.Internal
-import Data.Aeson ((.:), (<?>))
+import Data.Aeson ((.:))
+import Data.Aeson.Internal ((<?>))
 import qualified Data.Aeson.Internal as JSON (JSONPathElement(Key))
 import qualified Data.Aeson as JSON
 import Data.Foldable
@@ -101,13 +102,14 @@ createMenu m = do
             pure mi
 
 data Options = Options
-    { period :: Double
+    { debug  :: Bool
+    , period :: Double
     , format :: ByteString -> Menu
     , command :: [String]
     }
 
 optionParser :: Parser Options
-optionParser = Options <$> parsePeriod <*> parseFormat <*> parseCommand
+optionParser = Options <$> parseDebug <*> parsePeriod <*> parseFormat <*> parseCommand
     where
         parsePeriod :: Parser Double
         parsePeriod = option auto
@@ -134,6 +136,12 @@ optionParser = Options <$> parsePeriod <*> parseFormat <*> parseCommand
             <$> strArgument (metavar "CMD" <> help "Command to run")
             <*> many (strArgument (metavar "ARGS"))
 
+        parseDebug :: Parser Bool
+        parseDebug = switch
+            (  long "debug"
+            <> help "Enable menu items that assist in debugging"
+            )
+
 main :: IO ()
 main = runInBoundThread $ do
     opts <- execParser $ info (optionParser <**> helper) fullDesc
@@ -148,18 +156,30 @@ main = runInBoundThread $ do
                     Left f -> do
                         print f
                         putMVar mvMenu
-                            ( Menu "Error!"
-                                [MenuItem "See process output for details." []
-                                ]
+                            ( Menu "Error!" $
+                                [ MenuItem (Text.pack x) [] | x <- lines (show f)]
                             )
-                    Right res -> putMVar mvMenu (format opts (toStrict res))
+
+                    Right res -> do
+                        let
+                            menu' = format opts (toStrict res)
+                            menu
+                                | debug opts = menu'
+                                    { items = items menu'
+                                        ++ [ MenuSeparator
+                                           , MenuRaw "Debug: view output"
+                                               (writeOutput res |> exe "open" "-f")
+                                           ]
+                                    }
+                                | otherwise = menu'
+                        putMVar mvMenu menu
                 sendEvent
                 threadDelay (round $ period opts * 1000000)
 
         withAsync (runner) $ \_ -> do
             runApp $ takeMVar mvMenu >>= \menu -> do
                 runContT (createMenu menu) $ \nsmenu -> do
-                    setTitle si (title menu)
+                    setTitle si (if Text.null (title menu) then "[no title]" else (title menu))
                     setStatusItemMenu si nsmenu
 
 -- BitBar compatible Parser
