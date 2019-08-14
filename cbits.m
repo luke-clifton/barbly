@@ -62,7 +62,7 @@ NSString *newNSString(char *volatile str)
 void setTitle(NSStatusItem *si, char *title)
 {
     NSString *t = newNSString(title);
-    si.title = t;
+    si.button.title = t;
     [t release];
 }
 

@@ -12,16 +12,8 @@ jobs:
     - name: Install GHC
       run: |
         curl https://gitlab.haskell.org/haskell/ghcup/raw/master/bootstrap-haskell -sSf | sh
-    - name: Install dependencies
-      run: |
-        source ~/.ghcup/env
-        cabal v2-install --only-dependencies
     - name: Build
       run: |
         source ~/.ghcup/env
         cabal v2-configure --enable-tests
         cabal v2-build
-    - name: Run tests
-      run: |
-        source ~/.ghcup/env
-        cabal v2-test
