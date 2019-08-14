@@ -15,13 +15,13 @@ jobs:
     - name: Install dependencies
       run: |
         source ~/.ghcup/env
-        cabal install --only-dependencies --enable-tests
+        cabal v2-install --only-dependencies --enable-tests
     - name: Build
       run: |
         source ~/.ghcup/env
-        cabal configure --enable-tests
-        cabal build
+        cabal v2-configure --enable-tests
+        cabal v2-build
     - name: Run tests
       run: |
         source ~/.ghcup/env
-        cabal test
+        cabal v2-test
