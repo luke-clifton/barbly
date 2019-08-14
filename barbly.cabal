@@ -18,7 +18,7 @@ executable barbly
   other-modules:       AppKit
   build-depends: 
       base >=4.12 && <4.13
-    , shh >=0.7.0.0
+    , shh >=0.7.0.2
     , aeson
     , text
     , optparse-applicative

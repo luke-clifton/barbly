@@ -142,6 +142,9 @@ optionParser = Options <$> parseDebug <*> parsePeriod <*> parseFormat <*> parseC
             <> help "Enable menu items that assist in debugging"
             )
 
+view :: ExecArg a => a -> IO ()
+view s = writeOutput s |> exe "open" "-f"
+
 main :: IO ()
 main = runInBoundThread $ do
     opts <- execParser $ info (optionParser <**> helper) fullDesc
@@ -152,15 +155,19 @@ main = runInBoundThread $ do
             cmd:args = Main.command opts
 
             runner = forever $ do
-                tryFailure (exe cmd args |> capture) >>= \case
-                    Left f -> do
+                tryFailure (exe cmd args) `pipe` capture `pipeErr` capture >>= \case
+                    ((Left f, out), err) -> do
                         print f
                         putMVar mvMenu
                             ( Menu "Error!" $
                                 [ MenuItem (Text.pack x) [] | x <- lines (show f)]
+                                ++
+                                [ MenuRaw "View stdout" (view out)
+                                , MenuRaw "View stderr" (view err)
+                                ]
                             )
 
-                    Right res -> do
+                    ((Right (), res), err) -> do
                         let
                             menu' = format opts (toStrict res)
                             menu
@@ -168,7 +175,9 @@ main = runInBoundThread $ do
                                     { items = items menu'
                                         ++ [ MenuSeparator
                                            , MenuRaw "Debug: view output"
-                                               (writeOutput res |> exe "open" "-f")
+                                               $ view res
+                                           , MenuRaw "Debug: view stderr"
+                                               $ view err
                                            ]
                                     }
                                 | otherwise = menu'
