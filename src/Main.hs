@@ -1,4 +1,3 @@
-{-# LANGUAGE ForeignFunctionInterface #-}
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE DeriveAnyClass #-}
 {-# LANGUAGE LambdaCase #-}
@@ -6,29 +5,30 @@
 {-# LANGUAGE ExtendedDefaultRules #-}
 module Main where
 
-import GHC.Generics
-import Control.Monad.Cont
-import Foreign (withForeignPtr)
 import Control.Concurrent
 import Control.Concurrent.Async
-import Control.Exception
 import Control.Monad
+import Control.Monad.Cont
+import Data.Aeson ((.:))
+import Data.Aeson.Internal ((<?>))
+import qualified Data.Aeson as JSON
+
+-- Importing Aeson Internal module until
+-- https://github.com/bos/aeson/commit/220fd9aa816fc306068de3825160a59d5df3c515
+-- is released.
+import qualified Data.Aeson.Internal as JSON (JSONPathElement(Key))
+
 import qualified Data.Attoparsec.Text as P
 import Data.ByteString (ByteString)
 import qualified Data.ByteString.Char8 as Char8
-import Data.ByteString.Lazy (toStrict, fromStrict)
+import Data.ByteString.Lazy (toStrict)
 import Data.Char
-import Options.Applicative
-import Shh
-import Shh.Internal
-import Data.Aeson ((.:))
-import Data.Aeson.Internal ((<?>))
-import qualified Data.Aeson.Internal as JSON (JSONPathElement(Key))
-import qualified Data.Aeson as JSON
-import Data.Foldable
 import Data.Text (Text)
 import qualified Data.Text as Text
 import qualified Data.Text.Encoding as Text
+import GHC.Generics
+import Options.Applicative
+import Shh
 
 import AppKit
 
@@ -259,7 +259,7 @@ parseMenu = Menu <$> parseTitle <*> many (parseItem 0)
 
 parseBitBar :: ByteString -> Menu
 parseBitBar s = case P.parseOnly parseMenu (Text.decodeUtf8 s) of
-    Left e -> Menu "Error parsing bitbar syntax"
+    Left _ -> Menu "Error parsing bitbar syntax"
         [ MenuRaw "Show document" (writeOutput s |> exe "open" "-f")
         ]
     Right m -> m
