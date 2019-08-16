@@ -1,4 +1,5 @@
 # Barbly
+[![](https://img.shields.io/hackage/v/barbly.svg?colorB=%23999&label=barbly)](http://hackage.haskell.org/package/barbly)
 
 Barbly allows you to create status bar menus for macOS. It's similar to
 [bitbar](https://github.com/matryer/bitbar) and supports some of the same
