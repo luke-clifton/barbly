@@ -86,4 +86,6 @@ pairs separated by an `=`.
 
 Menu separators can be created with lines containing only `---`.
 
+### Example Scripts
+
 See the scripts in the [scripts](./scripts) directory for some examples.
