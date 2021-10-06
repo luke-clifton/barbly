@@ -18,7 +18,7 @@ jobs:
         cabal v2-configure --enable-tests
         cabal v2-build
         mkdir out
-        cabal v2-install --installdir=./out
+        cabal v2-install --installdir="$(pwd)/out"
     - name: Upload
       uses: actions/upload-artifact@v2
       with:
