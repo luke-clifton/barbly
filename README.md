@@ -89,3 +89,12 @@ Menu separators can be created with lines containing only `---`.
 ### Example Scripts
 
 See the scripts in the [scripts](./scripts) directory for some examples.
+
+### Multiple Menus
+
+Because each instance of barbly creates just one menu, you need to launch
+multiple processes to get multiple menus. If you launch them all from a
+script, this can cause the order of the resulting menu items to depend on
+the whims of the scheduler. This can be alleviated by yielding between
+spawning each process. A yield can be achieved by sleeping the process
+for 0 seconds.
