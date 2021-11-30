@@ -29,6 +29,8 @@ import qualified Data.Text.Encoding as Text
 import GHC.Generics
 import Options.Applicative
 import Shh
+import System.Posix
+import qualified System.IO as IO
 
 import AppKit
 
@@ -86,9 +88,10 @@ createMenu m = do
     where
         createMenuItem :: MenuItem -> ContT r IO NSMenuItem
         createMenuItem (MenuItem s []) = newMenuItem s
-        createMenuItem (MenuItem s (cmd:args)) = do
+        createMenuItem (MenuItem s cmds) = do
             mi <- newMenuItem s
-            liftIO (assignAction mi (exe (Text.encodeUtf8 cmd) (map Text.encodeUtf8 args)))
+            let cmd:args = concatMap (asArg . Text.encodeUtf8) cmds
+            liftIO (assignAction mi (runProc $ mkProcWith defaultProcOptions {closeFds = False} cmd args))
             pure mi
         createMenuItem (MenuRaw t a) = do
             mi <- newMenuItem t
@@ -102,22 +105,33 @@ createMenu m = do
             pure mi
 
 data Options = Options
-    { debug  :: Bool
-    , period :: Double
-    , format :: ByteString -> Menu
+    { debug   :: Bool
+    , period  :: Double
+    , checkfd :: String
+    , format  :: ByteString -> Menu
     , command :: [String]
     }
 
 optionParser :: Parser Options
-optionParser = Options <$> parseDebug <*> parsePeriod <*> parseFormat <*> parseCommand
+optionParser = Options <$> parseDebug <*> parsePeriod <*> parseCheckfd <*> parseFormat <*> parseCommand
     where
         parsePeriod :: Parser Double
         parsePeriod = option auto
             (  long "period"
             <> short 'p'
             <> value 300
-            <> help "Period between running the command in seconds (default 300)"
+            <> help "Period between running the command in seconds"
             <> metavar "SECONDS"
+            <> showDefault
+            )
+
+        parseCheckfd :: Parser String
+        parseCheckfd = strOption
+            (  long "checkfd"
+            <> help "Save a file descriptor number in the VARNAME environment variable. When a newline is written to this file descriptor, refresh the menu."
+            <> value ""
+            <> metavar "VARNAME"
+            <> showDefault
             )
 
         parseFormat :: Parser (ByteString -> Menu)
@@ -149,13 +163,21 @@ main :: IO ()
 main = runInBoundThread $ do
     opts <- execParser $ info (optionParser <**> helper) fullDesc
     mvMenu <- newEmptyMVar
+    mr <- case checkfd opts of
+        "" -> pure Nothing
+        _  -> do
+            (r, w) <- createPipe
+            setFdOption r CloseOnExec True
+            setEnv (checkfd opts) (show w) True
+            hr <- fdToHandle r
+            pure (Just hr)
     initApp
     runContT newStatusItem $ \si -> do
         let
-            cmd:args = Main.command opts
+            cmd:args = concatMap asArg (Main.command opts)
 
             runner = forever $ do
-                tryFailure (exe cmd args) `pipe` capture `pipeErr` capture >>= \case
+                tryFailure (mkProcWith defaultProcOptions {closeFds = False} cmd args) `pipe` capture `pipeErr` capture >>= \case
                     ((Left f, out), err) -> do
                         print f
                         putMVar mvMenu
@@ -183,7 +205,12 @@ main = runInBoundThread $ do
                                 | otherwise = menu'
                         putMVar mvMenu menu
                 sendEvent
-                threadDelay (round $ period opts * 1000000)
+                case mr of
+                    Nothing -> threadDelay (round $ period opts * 1000000)
+                    Just r  ->
+                        IO.hWaitForInput r (round $ period opts * 1000) >>= \case
+                            True -> void $ IO.hGetLine r
+                            False -> pure ()
 
         withAsync (runner) $ \_ -> do
             runApp $ takeMVar mvMenu >>= \menu -> do
