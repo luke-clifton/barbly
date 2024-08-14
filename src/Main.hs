@@ -17,6 +17,7 @@ import qualified Data.Aeson.Types as JSON
 import qualified Data.Attoparsec.Text as P
 import Data.ByteString (ByteString)
 import qualified Data.ByteString.Char8 as Char8
+import qualified Data.ByteString as BS
 import Data.ByteString.Lazy (toStrict)
 import Data.Char
 import Data.Text (Text)
@@ -251,8 +252,6 @@ parseItem lev = parseLevelIndicator *> P.choice
                     Just cmd -> do
                         pure $ MenuItem name $ cmd : (Map.findWithDefault [] "param" pglob)
                     _ -> fail "hmm"
-                        
-                
 
 parseAllTags :: P.Parser [(Text, Text)]
 parseAllTags = P.option [] $ do
@@ -291,8 +290,26 @@ parseTitle = Text.strip . Text.pack <$> P.manyTill P.anyChar (void (P.string "--
 parseMenu :: P.Parser Menu
 parseMenu = Menu <$> parseTitle <*> many (parseItem 0)
 
+stripControlSequences :: ByteString -> ByteString
+stripControlSequences i = case Char8.uncons i of
+    Just ('\ESC', r) -> go1 r
+    Just (c, r) -> Char8.cons c (stripControlSequences r)
+    Nothing -> Char8.empty
+
+    where
+        go1 :: ByteString -> ByteString
+        go1 i = case Char8.uncons i of
+            Just ('[', r) -> go2 r
+            Just (a, r) -> Char8.cons a $ stripControlSequences r
+            Nothing -> Char8.empty
+
+        go2 :: ByteString -> ByteString
+        go2 i = case BS.uncons i of
+            Just (c, r) -> if c >= 0x40 && c <= 0x7E then stripControlSequences r else go2 r
+            Nothing -> Char8.empty
+
 parseBitBar :: ByteString -> Menu
-parseBitBar s = case P.parseOnly parseMenu (Text.decodeUtf8 s) of
+parseBitBar s = case P.parseOnly parseMenu (Text.decodeUtf8 $ stripControlSequences s) of
     Left _ -> Menu "Error parsing bitbar syntax"
         [ MenuRaw "Show document" (writeOutput s |> exe "open" "-f")
         ]
