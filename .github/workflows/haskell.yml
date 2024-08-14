@@ -9,12 +9,9 @@ jobs:
 
     steps:
     - uses: actions/checkout@master
-    - name: Install GHC
-      run: |
-        curl https://gitlab.haskell.org/haskell/ghcup/raw/master/bootstrap-haskell -sSf | sh
+    - uses: haskell-actions/setup@v2
     - name: Build
       run: |
-        source ~/.ghcup/env
         cabal v2-configure --enable-tests
         cabal v2-build
         mkdir out
