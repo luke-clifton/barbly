@@ -5,6 +5,7 @@ module AppKit where
 
 import Control.Exception (finally, handle, SomeException(..))
 import Control.Monad.Cont
+import Control.Monad.IO.Class (liftIO)
 import Data.ByteString (useAsCString)
 import Data.Text (Text)
 import qualified Data.Text.Encoding as Text

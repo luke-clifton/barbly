@@ -10,6 +10,7 @@ import Control.Concurrent
 import Control.Concurrent.Async
 import Control.Monad
 import Control.Monad.Cont
+import Control.Monad.IO.Class (liftIO)
 import Data.Aeson ((.:), (<?>))
 import qualified Data.Aeson as JSON
 import qualified Data.Aeson.Types as JSON
