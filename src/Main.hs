@@ -1,4 +1,5 @@
 {-# LANGUAGE DeriveGeneric #-}
+{-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE DeriveAnyClass #-}
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE OverloadedStrings #-}
@@ -9,14 +10,9 @@ import Control.Concurrent
 import Control.Concurrent.Async
 import Control.Monad
 import Control.Monad.Cont
-import Data.Aeson ((.:))
-import Data.Aeson.Internal ((<?>))
+import Data.Aeson ((.:), (<?>))
 import qualified Data.Aeson as JSON
-
--- Importing Aeson Internal module until
--- https://github.com/bos/aeson/commit/220fd9aa816fc306068de3825160a59d5df3c515
--- is released.
-import qualified Data.Aeson.Internal as JSON (JSONPathElement(Key))
+import qualified Data.Aeson.Types as JSON
 
 import qualified Data.Attoparsec.Text as P
 import Data.ByteString (ByteString)
@@ -31,6 +27,7 @@ import Options.Applicative
 import Shh
 import System.Posix
 import qualified System.IO as IO
+import qualified Data.Map as Map
 
 import AppKit
 
@@ -222,8 +219,7 @@ main = runInBoundThread $ do
 parseItem :: Int -> P.Parser MenuItem
 parseItem lev = parseLevelIndicator *> P.choice
     [ parseSep
-    , parseBash
-    , parseOpen
+    , parseGeneric
     , parseSubMenu
     , parseInfo
     ]
@@ -243,22 +239,33 @@ parseItem lev = parseLevelIndicator *> P.choice
         parseBody = P.takeTill (\s -> s == '|' || s == '\n')
         parseTags p = (P.char '|' >> P.skipSpace) *> p <* P.endOfLine
         parseInfo = MenuItem <$> (P.takeWhile (/= '\n') <* P.endOfLine) <*> pure []
-        parseOpen = MenuItem <$> parseBody <*> ((\s -> ["open", s]) <$> parseTags parseURL)
-        parseURL = P.string "href=" *> parseString
-        parseBash = MenuItem <$> parseBody <*> parseTags parseBash'
-        parseBash' = do
-            P.string "bash="
-            cmd <- parseString
-            params <- P.choice [parseParams 1, pure []]
-            pure (cmd:params)
-        parseParams :: Int -> P.Parser [Text]
-        parseParams i = do
-            P.skipSpace
-            P.string "param"
-            P.string (Text.pack $ show i)
+        parseGeneric = do
+            name <- parseBody
+            params <- parseAllTags
+            optional $ P.skipWhile P.isHorizontalSpace
+            P.endOfLine
+            let pglob = Map.fromListWith (++) $ map (fmap (:[])) params
+            case lookup "href" params of
+                Just s -> pure $ MenuItem name ["open", s]
+                _ -> case lookup "bash" params of
+                    Just cmd -> do
+                        pure $ MenuItem name $ cmd : (Map.findWithDefault [] "param" pglob)
+                    _ -> fail "hmm"
+                        
+                
+
+parseAllTags :: P.Parser [(Text, Text)]
+parseAllTags = P.option [] $ do
+    P.char '|'
+    optional $ P.skipWhile P.isHorizontalSpace
+    P.sepBy parseGenericTag (P.skipWhile P.isHorizontalSpace)
+    where
+        parseGenericTag :: P.Parser (Text, Text)
+        parseGenericTag = do
+            key <- P.takeWhile isAlphaNum
             P.char '='
-            s <- parseString
-            P.choice [(s:) <$> parseParams (succ i), pure [s]]
+            val <- parseString
+            pure (key, val)
 
 parseString :: P.Parser Text
 parseString = P.choice [quoted,raw]

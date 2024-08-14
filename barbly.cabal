@@ -24,6 +24,7 @@ executable barbly
       base >=4.12 && <5
     , shh >=0.7.2.0
     , aeson
+    , containers
     , text
     , optparse-applicative
     , attoparsec
