@@ -156,7 +156,7 @@ optionParser = Options <$> parseDebug <*> parsePeriod <*> parseCheckfd <*> parse
             )
 
 view :: ExecArg a => a -> IO ()
-view s = writeOutput s |> exe "open" "-f"
+view s = writeOutput s |> exe "/usr/bin/open" "-f"
 
 main :: IO ()
 main = runInBoundThread $ do
