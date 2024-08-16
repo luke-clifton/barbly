@@ -248,7 +248,7 @@ parseItem lev = parseLevelIndicator *> P.choice
             P.endOfLine
             let pglob = Map.fromListWith (++) $ map (fmap (:[])) params
             case lookup "href" params of
-                Just s -> pure $ MenuItem name ["open", s]
+                Just s -> pure $ MenuItem name ["/usr/bin/open", s]
                 _ -> case lookup "bash" params of
                     Just cmd -> do
                         pure $ MenuItem name $ cmd : (Map.findWithDefault [] "param" pglob)
@@ -312,7 +312,7 @@ stripControlSequences i = case Char8.uncons i of
 parseBitBar :: ByteString -> Menu
 parseBitBar s = case P.parseOnly parseMenu (Text.decodeUtf8 $ stripControlSequences s) of
     Left _ -> Menu "Error parsing bitbar syntax"
-        [ MenuRaw "Show document" (writeOutput s |> exe "open" "-f")
+        [ MenuRaw "Show document" (writeOutput s |> exe "/usr/bin/open" "-f")
         ]
     Right m -> m
 
@@ -320,7 +320,7 @@ parseJSON :: ByteString -> Menu
 parseJSON s = case JSON.eitherDecodeStrict' s of
     Left e -> Menu "Error parsing json" $
         [MenuItem l [] | l <- Text.lines (Text.pack e)]
-        ++ [MenuRaw "Open JSON document" (writeOutput s |> exe "open" "-f")]
+        ++ [MenuRaw "Open JSON document" (writeOutput s |> exe "/usr/bin/open" "-f")]
     Right m -> m
 
 -- | Parse auto attempts to detect if this is meant to be a JSON object by looking
