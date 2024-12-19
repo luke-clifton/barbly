@@ -1,6 +1,6 @@
 cabal-version:       >=1.10
 name:                barbly
-version:             0.1.0.1
+version:             0.2.0.0
 synopsis:            Create status bar menus for macOS from executables
 description:         Allows you to place the stdout of a process in the macOS status bar.
 bug-reports:         https://github.com/luke-clifton/barbly
