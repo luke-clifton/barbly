@@ -15,6 +15,10 @@ import Data.Aeson ((.:), (<?>))
 import qualified Data.Aeson as JSON
 import qualified Data.Aeson.Types as JSON
 
+import System.Process
+import System.Exit
+import System.IO
+import System.Environment
 import qualified Data.Attoparsec.Text as P
 import Data.ByteString (ByteString)
 import qualified Data.ByteString.Char8 as Char8
@@ -26,8 +30,6 @@ import qualified Data.Text as Text
 import qualified Data.Text.Encoding as Text
 import GHC.Generics
 import Options.Applicative
-import Shh
-import System.Posix
 import qualified System.IO as IO
 import qualified Data.Map as Map
 
@@ -89,8 +91,15 @@ createMenu m = do
         createMenuItem (MenuItem s []) = newMenuItem s
         createMenuItem (MenuItem s cmds) = do
             mi <- newMenuItem s
-            let cmd:args = concatMap (asArg . Text.encodeUtf8) cmds
-            liftIO (assignAction mi (runProc $ mkProcWith defaultProcOptions {closeFds = False} cmd args))
+            let cmd:args = map Text.unpack cmds
+            let cp = (proc cmd args)
+                    { std_in = NoStream
+                    , std_out = NoStream
+                    , std_err = NoStream
+                    , close_fds = False
+                    , delegate_ctlc = True
+                    }
+            liftIO (assignAction mi (createProcess cp >>= \(_, _,_, h) -> void (waitForProcess h)))
             pure mi
         createMenuItem (MenuRaw t a) = do
             mi <- newMenuItem t
@@ -106,13 +115,12 @@ createMenu m = do
 data Options = Options
     { debug   :: Bool
     , period  :: Double
-    , checkfd :: String
     , format  :: ByteString -> Menu
     , command :: [String]
     }
 
 optionParser :: Parser Options
-optionParser = Options <$> parseDebug <*> parsePeriod <*> parseCheckfd <*> parseFormat <*> parseCommand
+optionParser = Options <$> parseDebug <*> parsePeriod <*> parseFormat <*> parseCommand
     where
         parsePeriod :: Parser Double
         parsePeriod = option auto
@@ -121,15 +129,6 @@ optionParser = Options <$> parseDebug <*> parsePeriod <*> parseCheckfd <*> parse
             <> value 300
             <> help "Period between running the command in seconds"
             <> metavar "SECONDS"
-            <> showDefault
-            )
-
-        parseCheckfd :: Parser String
-        parseCheckfd = strOption
-            (  long "checkfd"
-            <> help "Save a file descriptor number in the VARNAME environment variable. When a newline is written to this file descriptor, refresh the menu."
-            <> value ""
-            <> metavar "VARNAME"
             <> showDefault
             )
 
@@ -155,61 +154,59 @@ optionParser = Options <$> parseDebug <*> parsePeriod <*> parseCheckfd <*> parse
             <> help "Enable menu items that assist in debugging"
             )
 
-view :: ExecArg a => a -> IO ()
-view s = writeOutput s |> exe "/usr/bin/open" "-f"
+view :: String -> IO ()
+view = void . readProcess "/usr/bin/open" ["-f"]
 
 main :: IO ()
 main = runInBoundThread $ do
     opts <- execParser $ info (optionParser <**> helper) fullDesc
     mvMenu <- newEmptyMVar
-    mr <- case checkfd opts of
-        "" -> pure Nothing
-        _  -> do
-            (r, w) <- createPipe
-            setFdOption r CloseOnExec True
-            setEnv (checkfd opts) (show w) True
-            hr <- fdToHandle r
-            pure (Just hr)
     initApp
     runContT newStatusItem $ \si -> do
         let
-            cmd:args = concatMap asArg (Main.command opts)
+            cmd:args = (Main.command opts)
+            cp = (proc cmd args)
+                { close_fds = False
+                , std_in = NoStream
+                , std_out = CreatePipe
+                , std_err = CreatePipe
+                }
 
             runner = forever $ do
-                tryFailure (mkProcWith defaultProcOptions {closeFds = False} cmd args) `pipe` capture `pipeErr` capture >>= \case
-                    ((Left f, out), err) -> do
-                        print f
-                        putMVar mvMenu
-                            ( Menu "Error!" $
-                                [ MenuItem (Text.pack x) [] | x <- lines (show f)]
-                                ++
-                                [ MenuRaw "View stdout" (view out)
-                                , MenuRaw "View stderr" (view err)
-                                ]
-                            )
+                (Nothing, Just sout, Just serr, h) <- createProcess cp
+                
+                runConcurrently ((,,)
+                    <$> Concurrently (hGetContents' sout)
+                    <*> Concurrently (hGetContents' serr)
+                    <*> Concurrently (waitForProcess h)
+                    ) >>= \case
+                        (out, err, ExitFailure f) -> do
+                            putMVar mvMenu
+                                ( Menu "Error!" $
+                                    [ MenuItem (Text.pack $ "Exit failure: " ++ show f) [] ]
+                                    ++
+                                    [ MenuRaw "View stdout" (view out)
+                                    , MenuRaw "View stderr" (view err)
+                                    ]
+                                )
 
-                    ((Right (), res), err) -> do
-                        let
-                            menu' = format opts (toStrict res)
-                            menu
-                                | debug opts = menu'
-                                    { items = items menu'
-                                        ++ [ MenuSeparator
-                                           , MenuRaw "Debug: view output"
-                                               $ view res
-                                           , MenuRaw "Debug: view stderr"
-                                               $ view err
-                                           ]
-                                    }
-                                | otherwise = menu'
-                        putMVar mvMenu menu
+                        (res, err, ExitSuccess) -> do
+                            let
+                                menu' = format opts (Text.encodeUtf8 $ Text.pack res)
+                                menu
+                                    | debug opts = menu'
+                                        { items = items menu'
+                                            ++ [ MenuSeparator
+                                               , MenuRaw "Debug: view output"
+                                                   $ view res
+                                               , MenuRaw "Debug: view stderr"
+                                                   $ view err
+                                               ]
+                                        }
+                                    | otherwise = menu'
+                            putMVar mvMenu menu
                 sendEvent
-                case mr of
-                    Nothing -> threadDelay (round $ period opts * 1000000)
-                    Just r  ->
-                        IO.hWaitForInput r (round $ period opts * 1000) >>= \case
-                            True -> void $ IO.hGetLine r
-                            False -> pure ()
+                threadDelay (round $ period opts * 1000000)
 
         withAsync (runner) $ \_ -> do
             runApp $ takeMVar mvMenu >>= \menu -> do
@@ -320,7 +317,7 @@ stripControlSequences i = case Char8.uncons i of
 parseBitBar :: ByteString -> Menu
 parseBitBar s = case P.parseOnly parseMenu (Text.decodeUtf8 $ stripControlSequences s) of
     Left _ -> Menu "Error parsing bitbar syntax"
-        [ MenuRaw "Show document" (writeOutput s |> exe "/usr/bin/open" "-f")
+        [ MenuRaw "Show document" (view $ Text.unpack $ Text.decodeUtf8 s)
         ]
     Right m -> m
 
@@ -328,7 +325,7 @@ parseJSON :: ByteString -> Menu
 parseJSON s = case JSON.eitherDecodeStrict' s of
     Left e -> Menu "Error parsing json" $
         [MenuItem l [] | l <- Text.lines (Text.pack e)]
-        ++ [MenuRaw "Open JSON document" (writeOutput s |> exe "/usr/bin/open" "-f")]
+        ++ [MenuRaw "Open JSON document" (view $ Text.unpack $ Text.decodeUtf8 s)]
     Right m -> m
 
 -- | Parse auto attempts to detect if this is meant to be a JSON object by looking
