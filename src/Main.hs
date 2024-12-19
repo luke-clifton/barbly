@@ -238,14 +238,10 @@ parseItem lev = parseLevelIndicator *> P.choice
             pure $ MenuSub $ Menu t is
 
         parseSep = P.string "---" *> P.endOfLine *> pure MenuSeparator
-        parseBody = P.takeTill (\s -> s == '|' || s == '\n')
-        parseTags p = (P.char '|' >> P.skipSpace) *> p <* P.endOfLine
         parseInfo = MenuItem <$> (P.takeWhile (/= '\n') <* P.endOfLine) <*> pure []
         parseGeneric = do
-            name <- parseBody
+            (name, params) <- parseBodyWithTags
             params <- parseAllTags
-            optional $ P.skipWhile P.isHorizontalSpace
-            P.endOfLine
             let pglob = Map.fromListWith (++) $ map (fmap (:[])) params
             case lookup "href" params of
                 Just s -> pure $ MenuItem name ["/usr/bin/open", s]
@@ -253,6 +249,14 @@ parseItem lev = parseLevelIndicator *> P.choice
                     Just cmd -> do
                         pure $ MenuItem name $ cmd : (Map.findWithDefault [] "param" pglob)
                     _ -> fail "hmm"
+
+parseBodyWithTags :: P.Parser (Text, [(Text, Text)])
+parseBodyWithTags = do
+    t <- P.takeTill (\s -> s == '|' || s == '\n')
+    ts <- parseAllTags
+    optional $ P.skipWhile P.isHorizontalSpace
+    P.endOfLine
+    pure (t, ts)
 
 parseAllTags :: P.Parser [(Text, Text)]
 parseAllTags = P.option [] $ do
@@ -286,7 +290,11 @@ parseString = P.choice [quoted,raw]
         raw = P.takeWhile (\c -> isAlphaNum c || c `elem` "./()[]{}!@#$%^&*,:;-\\")
 
 parseTitle :: P.Parser Text
-parseTitle = Text.strip . Text.pack <$> P.manyTill P.anyChar (void (P.string "---\n") <|> P.endOfInput)
+--parseTitle = Text.strip . Text.pack <$> P.manyTill P.anyChar (void (P.string "---\n") <|> P.endOfInput)
+parseTitle = do
+    (t, ts) <- parseBodyWithTags
+    void (P.string "---\n") <|> P.endOfInput
+    pure t
 
 parseMenu :: P.Parser Menu
 parseMenu = Menu <$> parseTitle <*> many (parseItem 0)
