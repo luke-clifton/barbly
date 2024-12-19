@@ -24,14 +24,6 @@ Clicking on an item will open the issue in your browser.
 
 ## Other Features
 
-### Check FD
-
-Barbly can create a file descriptor in the child processes that can be used
-to indicate that the bar should be refreshed immediately. Use `--checkfd VARNAME`
-to enable this feature. Barbly will save the file descriptor number into the
-environment variable `VARNAME`, and the child processes can write a newline
-character to this file descriptor to cause an immediate refresh.
-
 ## Syntax
 
 Barbly can decode either JSON objects or BitBar syntax for the script outputs.
