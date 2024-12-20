@@ -238,7 +238,6 @@ parseItem lev = parseLevelIndicator *> P.choice
         parseInfo = MenuItem <$> (P.takeWhile (/= '\n') <* P.endOfLine) <*> pure []
         parseGeneric = do
             (name, params) <- parseBodyWithTags
-            params <- parseAllTags
             let pglob = Map.fromListWith (++) $ map (fmap (:[])) params
             case lookup "href" params of
                 Just s -> pure $ MenuItem name ["/usr/bin/open", s]
