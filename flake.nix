@@ -3,12 +3,12 @@
 
   outputs = { self, nixpkgs }: {
 
-    packages.x86_64-darwin.barbly =
+    packages.aarch64-darwin.barbly =
       let
-        pkgs = nixpkgs.legacyPackages.x86_64-darwin;
+        pkgs = nixpkgs.legacyPackages.aarch64-darwin;
       in pkgs.haskell.lib.addBuildDepend (pkgs.haskellPackages.callCabal2nix "barbly" ./. {}) pkgs.darwin.apple_sdk.frameworks.AppKit;
 
-    defaultPackage.x86_64-darwin = self.packages.x86_64-darwin.barbly;
+    defaultPackage.aarch64-darwin = self.packages.aarch64-darwin.barbly;
 
   };
 }
