@@ -8,6 +8,10 @@ syntax.
 Each instance of a barbly executable creates only one menu item. You specify
 the period at which to refresh, and the command to generate the menu contents.
 
+> [!NOTE]
+> Newer versions of macOS require that you grant barbly permission to appear
+> in the menu bar. System Settings -> Menu Bar -> Allow in Menu Bar
+
 ## Sample Scripts
 
 Some sample scripts that are useful to use with barbly can be found in the
