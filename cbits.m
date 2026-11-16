@@ -39,9 +39,10 @@ void freeHaskellFunPtr(void (*ptr)(void));
 
 void sendEvent(void)
 {
-    NSEvent *e = [NSEvent otherEventWithType: NSEventTypeApplicationDefined location: NSZeroPoint modifierFlags: 0 timestamp: 0 windowNumber: 0 context: nil subtype: 12 data1: 0 data2: 0];
-    [NSApp postEvent: e atStart: NO];
-    [e release];
+    @autoreleasepool {
+        NSEvent *e = [NSEvent otherEventWithType: NSEventTypeApplicationDefined location: NSZeroPoint modifierFlags: 0 timestamp: 0 windowNumber: 0 context: nil subtype: 12 data1: 0 data2: 0];
+        [NSApp postEvent: e atStart: NO];
+    }
 }
 
 void initApp(void)
@@ -51,7 +52,7 @@ void initApp(void)
 
 NSStatusItem *newStatusItem(void)
 {
-    return [[NSStatusBar systemStatusBar] statusItemWithLength:NSVariableStatusItemLength];
+    return [[[NSStatusBar systemStatusBar] statusItemWithLength:NSVariableStatusItemLength] retain];
 }
 
 NSString *newNSString(char *volatile str)
@@ -93,7 +94,7 @@ NSMenuItem *newMenuItem(char *title)
 
 void assignAction(NSMenuItem *mi, void (*ptr)(void))
 {
-    IOAction *action = [IOAction alloc];
+    IOAction *action = [[IOAction alloc] init];
     action->ioaction = ptr;
     mi.target = action;
     mi.action = @selector(callIOAction);

@@ -68,4 +68,4 @@ newSeparator :: ContT r IO NSMenuItem
 newSeparator = ContT $ \go -> do
     mi <- newSeparator'
     go mi
-    -- Does not need to be released, it's a constant.
+    -- Does not need to be released, it's autorelease
